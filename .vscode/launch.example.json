@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ktgk - Android USB API",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define=API_BASE_URL=http://localhost:3000/api"
+      ]
+    },
+    {
+      "name": "ktgk - Redmi Wi-Fi API",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define=API_BASE_URL=http://[ĐIỀN_IP_CỦA_BẠN]:3000/api"
+      ]
+    },
+    {
+      "name": "ktgk - Android Emulator API",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define=API_BASE_URL=http://10.0.2.2:3000/api"
+      ]
+    }
+  ]
+}
