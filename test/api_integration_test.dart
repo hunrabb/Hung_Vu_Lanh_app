@@ -110,6 +110,30 @@ void main() {
       );
     }
   });
+  test(
+    'runtime API detection distinguishes Android device and emulator',
+    () async {
+      await ApiConfig.initialize(
+        isWebOverride: false,
+        platformOverride: TargetPlatform.android,
+        androidPhysicalDeviceResolver: () async => true,
+      );
+      expect(ApiConfig.baseUrl, 'http://localhost:3000/api');
+
+      await ApiConfig.initialize(
+        isWebOverride: false,
+        platformOverride: TargetPlatform.android,
+        androidPhysicalDeviceResolver: () async => false,
+      );
+      expect(ApiConfig.baseUrl, 'http://10.0.2.2:3000/api');
+
+      await ApiConfig.initialize(
+        isWebOverride: true,
+        platformOverride: TargetPlatform.android,
+      );
+      expect(ApiConfig.baseUrl, 'http://localhost:3000/api');
+    },
+  );
   test('login persists token, sends Bearer, restores with me, wrong password does not expire a session', () async {
     final memory = MemoryTokens(), tokens = TokenStore(memory);
     var wrong = false;

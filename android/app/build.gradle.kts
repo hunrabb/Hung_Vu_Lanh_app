@@ -47,3 +47,13 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+val runAdbReverse = tasks.register<Exec>("runAdbReverse") {
+    isIgnoreExitValue = true
+    val adb = androidComponents.sdkComponents.adb.get().asFile.absolutePath
+    commandLine(adb, "reverse", "tcp:3000", "tcp:3000")
+}
+
+tasks.named("preBuild") {
+    dependsOn(runAdbReverse)
+}
