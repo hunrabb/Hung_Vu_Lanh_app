@@ -10,11 +10,12 @@ class CustomButton extends StatelessWidget {
     width: double.infinity,
     child: FilledButton.icon(
       style: FilledButton.styleFrom(
-        backgroundColor: const Color(0xFFD4AF37),
-        foregroundColor: const Color(0xFF1A1A1A),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        backgroundColor: const Color(0xFFCDAE7F),
+        foregroundColor: const Color(0xFF30251F),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        textStyle: Theme.of(context).textTheme.labelLarge
+            ?.copyWith(fontSize: 17, fontWeight: FontWeight.w700),
       ),
       onPressed: onPressed,
       icon: const Icon(Icons.calendar_month),

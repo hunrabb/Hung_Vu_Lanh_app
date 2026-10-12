@@ -160,7 +160,7 @@ class _ApiBookingScreenState extends State<ApiBookingScreen> {
         ? c.watch<AuthController>().currentUser?.branchId
         : _branch;
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         title: Text(widget.walkIn ? 'Tạo lịch nhanh' : 'Đặt lịch'),
       ),
@@ -203,6 +203,7 @@ class _ApiBookingScreenState extends State<ApiBookingScreen> {
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'Dịch vụ'),
             items: p.services
+                .where((s) => s['categoryId'] != 'shaving')
                 .map(
                   (s) => DropdownMenuItem(
                     value: s['id'] as String,

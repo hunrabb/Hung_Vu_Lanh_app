@@ -71,16 +71,16 @@ class StaffProfileScreen extends StatelessWidget {
     final requests = remote ? <LeaveRequest>[] : users.leaveRequests;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: const Color(0xFFFAF7F2),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Text(
           'Hồ sơ nhân viên',
           style: TextStyle(
-            color: Color(0xFF1A1A1A),
+            color: Color(0xFF30251F),
             fontWeight: FontWeight.w700,
             letterSpacing: -0.5,
           ),
@@ -103,7 +103,7 @@ class StaffProfileScreen extends StatelessWidget {
               profile?.name ?? user.name,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Color(0xFF1A1A1A),
+                color: Color(0xFF30251F),
                 fontSize: 21,
                 fontWeight: FontWeight.w700,
               ),
@@ -112,13 +112,13 @@ class StaffProfileScreen extends StatelessWidget {
             const Text(
               'Thông tin hồ sơ nhân viên',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF757575), fontSize: 12),
+              style: TextStyle(color: Color(0xFF817368), fontSize: 12),
             ),
             const SizedBox(height: 3),
             Text(
               'Chuyên môn: ${categoryLabels(profile?.specializedCategoryIds ?? [])}',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF757575), fontSize: 13),
+              style: TextStyle(color: Color(0xFF817368), fontSize: 13),
             ),
             const SizedBox(height: 22),
             if (remote) const ApiProfileStats(),
@@ -207,7 +207,7 @@ class StaffProfileScreen extends StatelessWidget {
                     ),
                     const Text(
                       'Ngày được duyệt sẽ chặn lịch mới. Các ca đã đặt vẫn giữ nguyên.',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF757575)),
+                      style: TextStyle(fontSize: 12, color: Color(0xFF817368)),
                     ),
                   ],
                 ),
@@ -271,12 +271,12 @@ class _StatisticCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: const Color(0xFFD4AF37), size: 20),
+        Icon(icon, color: const Color(0xFFC5A16B), size: 20),
         const SizedBox(height: 10),
         Text(
           value,
           style: const TextStyle(
-            color: Color(0xFF1A1A1A),
+            color: Color(0xFF30251F),
             fontSize: 21,
             fontWeight: FontWeight.w700,
           ),
@@ -285,7 +285,7 @@ class _StatisticCard extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            color: Color(0xFF757575),
+            color: Color(0xFF817368),
             fontSize: 10,
             height: 1.3,
           ),

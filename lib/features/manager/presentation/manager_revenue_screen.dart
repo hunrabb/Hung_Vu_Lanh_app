@@ -60,7 +60,7 @@ class _ManagerRevenueScreenState extends State<ManagerRevenueScreen> {
     final transactions = booking.completedTransactions(branchId: branchId);
     final ranking = booking.monthlyStaffRevenue(branchId: branchId);
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         title: const Text('Báo cáo Doanh số'),
         backgroundColor: Colors.white,
@@ -98,7 +98,7 @@ class _ManagerRevenueScreenState extends State<ManagerRevenueScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF182A29),
+              color: const Color(0xFF30251F),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(

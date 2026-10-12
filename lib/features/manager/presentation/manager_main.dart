@@ -1,3 +1,7 @@
+import '../../../shared/widgets/salon_brand.dart';
+import '../../auth/application/auth_controller.dart';
+import 'api_manager_staff_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,10 +24,16 @@ class ManagerMain extends StatefulWidget {
 
 class _ManagerMainState extends State<ManagerMain> {
   late int _selectedIndex = widget.initialIndex;
+  int _staffRefresh = 0;
   void _addStaff() {
     setState(() => _selectedIndex = 1);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || _selectedIndex != 1) return;
+      if (context.read<AuthController>().isRemote) {
+        await showApiStaffEditor(context);
+        if (mounted) setState(() => _staffRefresh++);
+        return;
+      }
       final provider = context.read<UserProvider>();
       showDialog<void>(
         context: context,
@@ -34,10 +44,10 @@ class _ManagerMainState extends State<ManagerMain> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFFAFAFA),
+    backgroundColor: const Color(0xFFFAF7F2),
     // Only the selected tab is built; each screen owns its AppBar and actions.
     body: switch (_selectedIndex) {
-      1 => const ManagerStaffScreen(),
+      1 => ManagerStaffScreen(key: ValueKey(_staffRefresh)),
       2 => const ManagerServiceScreen(),
       3 => const ManagerSettingsScreen(),
       _ => ManagerDashboardScreen(
@@ -51,30 +61,30 @@ class _ManagerMainState extends State<ManagerMain> {
       type: BottomNavigationBarType.fixed,
       backgroundColor: Colors.white,
       elevation: 0,
-      showUnselectedLabels: false,
-      selectedItemColor: const Color(0xFF1A1A1A),
-      unselectedItemColor: const Color(0xFFA0A0A0),
+      showUnselectedLabels: true,
+      selectedItemColor: const Color(0xFF594536),
+      unselectedItemColor: const Color(0xFF81766C),
       selectedFontSize: 11,
       selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.dashboard_outlined),
-          activeIcon: Icon(Icons.dashboard),
+          activeIcon: SalonNavIcon(icon: Icons.dashboard),
           label: 'Tổng quan',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.badge_outlined),
-          activeIcon: Icon(Icons.badge),
+          activeIcon: SalonNavIcon(icon: Icons.badge),
           label: 'Nhân viên',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.spa_outlined),
-          activeIcon: Icon(Icons.spa),
+          activeIcon: SalonNavIcon(icon: Icons.spa),
           label: 'Dịch vụ',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings_outlined),
-          activeIcon: Icon(Icons.settings),
+          activeIcon: SalonNavIcon(icon: Icons.settings),
           label: 'Cài đặt',
         ),
       ],

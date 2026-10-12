@@ -1,3 +1,5 @@
+import '../../../shared/widgets/salon_brand.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../staff/presentation/staff_customers_screen.dart';
@@ -24,7 +26,7 @@ class _StaffMainState extends State<StaffMain> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFFAFAFA),
+    backgroundColor: const Color(0xFFFAF7F2),
     body: IndexedStack(index: _selectedIndex, children: _screens),
     bottomNavigationBar: BottomNavigationBar(
       currentIndex: _selectedIndex,
@@ -33,29 +35,29 @@ class _StaffMainState extends State<StaffMain> {
       backgroundColor: Colors.white,
       elevation: 0,
       showUnselectedLabels: true,
-      selectedItemColor: const Color(0xFF1A1A1A),
-      unselectedItemColor: const Color(0xFFA0A0A0),
+      selectedItemColor: const Color(0xFF594536),
+      unselectedItemColor: const Color(0xFF81766C),
       selectedFontSize: 11,
       selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.calendar_today_outlined),
-          activeIcon: Icon(Icons.calendar_month),
+          activeIcon: SalonNavIcon(icon: Icons.calendar_month),
           label: 'Lịch làm việc',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.people_outline),
-          activeIcon: Icon(Icons.people),
+          activeIcon: SalonNavIcon(icon: Icons.people),
           label: 'Khách hàng',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.payments_outlined),
-          activeIcon: Icon(Icons.payments),
+          activeIcon: SalonNavIcon(icon: Icons.payments),
           label: 'Thu nhập',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
+          activeIcon: SalonNavIcon(icon: Icons.person),
           label: 'Hồ sơ',
         ),
       ],

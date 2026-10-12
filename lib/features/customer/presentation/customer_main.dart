@@ -1,3 +1,5 @@
+import '../../../shared/widgets/salon_brand.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -21,20 +23,23 @@ class _CustomerMainState extends State<CustomerMain> {
     // Giữ vị trí cuộn và state Home khi chuyển giữa các tab.
     return Theme(
       data: Theme.of(context).copyWith(
-        scaffoldBackgroundColor: const Color(0xFFFAFAFA),
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A1A1A))
+        scaffoldBackgroundColor: const Color(0xFFFAF7F2),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF594536))
             .copyWith(
-              primary: const Color(0xFF1A1A1A),
-              secondary: const Color(0xFFD4AF37),
+              primary: const Color(0xFF594536),
+              secondary: const Color(0xFFC5A16B),
             ),
       ),
       child: Scaffold(
         body: IndexedStack(
           index: _selectedIndex,
-          children: const [
-            CustomerHomeScreen(),
-            CustomerAppointmentsScreen(),
-            _ProfileTab(),
+          children: [
+            TickerMode(
+              enabled: _selectedIndex == 0,
+              child: const CustomerHomeScreen(),
+            ),
+            const CustomerAppointmentsScreen(),
+            const _ProfileTab(),
           ],
         ),
         bottomNavigationBar: DecoratedBox(
@@ -57,25 +62,25 @@ class _CustomerMainState extends State<CustomerMain> {
             type: BottomNavigationBarType.fixed,
             backgroundColor: Colors.white,
             elevation: 0,
-            showUnselectedLabels: false,
-            selectedItemColor: const Color(0xFF1A1A1A),
-            unselectedItemColor: const Color(0xFFA0A0A0),
+            showUnselectedLabels: true,
+            selectedItemColor: const Color(0xFF594536),
+            unselectedItemColor: const Color(0xFF81766C),
             selectedFontSize: 11,
             selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home_rounded),
+                activeIcon: SalonNavIcon(icon: Icons.home_rounded),
                 label: 'Trang chủ',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.calendar_today_outlined),
-                activeIcon: Icon(Icons.calendar_month),
+                activeIcon: SalonNavIcon(icon: Icons.calendar_month),
                 label: 'Lịch hẹn',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
+                activeIcon: SalonNavIcon(icon: Icons.person),
                 label: 'Hồ sơ',
               ),
             ],
@@ -104,7 +109,7 @@ class _ProfileTab extends StatelessWidget {
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.5,
-                color: Color(0xFF1A1A1A),
+                color: Color(0xFF30251F),
               ),
             ),
             const SizedBox(height: 36),
@@ -115,7 +120,7 @@ class _ProfileTab extends StatelessWidget {
                 child: Icon(
                   Icons.person_outline,
                   size: 38,
-                  color: Color(0xFF1A1A1A),
+                  color: Color(0xFF30251F),
                 ),
               ),
             ),
@@ -144,7 +149,7 @@ class _ProfileTab extends StatelessWidget {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.star_outline, color: Color(0xFFD4AF37)),
+                  Icon(Icons.star_outline, color: Color(0xFFC5A16B)),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -159,7 +164,7 @@ class _ProfileTab extends StatelessWidget {
             const SizedBox(height: 32),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF1A1A1A),
+                foregroundColor: const Color(0xFF30251F),
                 side: const BorderSide(color: Color(0xFFE0E0E0)),
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(

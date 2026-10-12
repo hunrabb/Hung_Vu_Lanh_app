@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../branches/application/branch_provider.dart';
 
-const bossInk = Color(0xFF182A29);
-const bossAccent = Color(0xFF247565);
+const bossInk = Color(0xFF30251F);
+const bossAccent = Color(0xFF8B6C45);
 String bossMoney(int value) =>
     '${value.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}đ';
 String bossDate(DateTime value) {
@@ -56,7 +56,7 @@ class BossPanel extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0xFFE7ECEA)),
+      border: Border.all(color: const Color(0xFFE7DFD3)),
       boxShadow: const [
         BoxShadow(
           color: Color(0x08000000),

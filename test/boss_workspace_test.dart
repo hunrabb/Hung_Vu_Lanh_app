@@ -254,6 +254,7 @@ void main() {
         'pending@example.com',
       );
       await tester.enterText(find.byType(TextFormField).at(1), 'allocated123');
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Login'));
       await tester.tap(find.widgetWithText(FilledButton, 'Login'));
       await tester.pumpAndSettle();
       expect(find.byType(StaffMain), findsOneWidget);

@@ -48,7 +48,11 @@ void main() {
         find.byType(staff ? StaffMain : ManagerMain),
       );
       final auth = context.read<AuthController>();
-      await tester.ensureVisible(find.text('Đăng xuất'));
+      await tester.scrollUntilVisible(
+        find.text('Đăng xuất'),
+        150,
+        scrollable: find.byType(Scrollable).last,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Đăng xuất'));
       await tester.pumpAndSettle();

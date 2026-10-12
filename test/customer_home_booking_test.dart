@@ -67,6 +67,7 @@ void main() {
   ) async {
     await start(tester, empty: true);
     expect(find.text('Lịch hẹn sắp tới'), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('primary-booking')));
     await tester.tap(find.byKey(const ValueKey('primary-booking')));
     await tester.pumpAndSettle();
     expect(find.byType(CustomerBookingScreen), findsOneWidget);

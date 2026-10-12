@@ -26,9 +26,9 @@ class ManagerDashboardScreen extends StatelessWidget {
   });
   final VoidCallback? onAddStaff, onManageServices;
 
-  static const _ink = Color(0xFF1A1A1A);
-  static const _muted = Color(0xFF757575);
-  static const _gold = Color(0xFFD4AF37);
+  static const _ink = Color(0xFF30251F);
+  static const _muted = Color(0xFF817368);
+  static const _gold = Color(0xFFC5A16B);
   String _money(int value) =>
       '${value.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (match) => '${match[1]}.')}đ';
   String _time(DateTime value) {
@@ -402,7 +402,7 @@ class ManagerDashboardScreen extends StatelessWidget {
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
+                      color: const Color(0xFFF3EEE6),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     padding: const EdgeInsets.all(6),
@@ -427,7 +427,7 @@ class ManagerDashboardScreen extends StatelessWidget {
                               minLeadingWidth: 32,
                               leading: CircleAvatar(
                                 radius: 16,
-                                backgroundColor: const Color(0xFFF2F2F2),
+                                backgroundColor: const Color(0xFFF0EAE2),
                                 child: Text(
                                   appointment.initial,
                                   style: const TextStyle(
@@ -466,7 +466,7 @@ class ManagerDashboardScreen extends StatelessWidget {
                                   vertical: 7,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF2F2F2),
+                                  color: const Color(0xFFF0EAE2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(

@@ -154,7 +154,7 @@ class CustomerAppointmentsScreen extends StatelessWidget {
             const Icon(
               Icons.calendar_today_outlined,
               size: 52,
-              color: Color(0xFFD4AF37),
+              color: Color(0xFFC5A16B),
             ),
             const SizedBox(height: 20),
             const Text('Bạn chưa có lịch hẹn nào', textAlign: TextAlign.center),

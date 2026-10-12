@@ -245,7 +245,7 @@ class _ApiReportScreenState extends State<ApiReportScreen> {
             body: body,
           )
         : SafeArea(
-            child: Material(color: const Color(0xFFFAF8F4), child: body),
+            child: Material(color: const Color(0xFFFAF7F2), child: body),
           );
   }
 

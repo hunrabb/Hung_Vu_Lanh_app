@@ -38,6 +38,10 @@ test("new read routes filter Staff correctly and return the shared catalog", asy
   })
     .overrideProvider(getRepositoryToken(User))
     .useValue({
+      manager: { findBy: async (_entity, where) => {
+        assert.ok(where.staffId);
+        return [{staffId: 's1', categoryId: 'hairWash'}, {staffId: 's1', categoryId: 'haircut'}];
+      } },
       find: async ({ where }) =>
         people.filter((p) =>
           Object.entries(where).every(([k, v]) => p[k] === v),
@@ -74,6 +78,9 @@ test("new read routes filter Staff correctly and return the shared catalog", asy
       (await get("/api/users/branch/a")).map((p) => p.id),
       ["s1", "s2"],
     );
+    const staff = await get("/api/users/branch/a");
+    assert.deepEqual(staff[0].specializedCategoryIds, ["hairWash", "haircut"]);
+    assert.deepEqual(staff[1].specializedCategoryIds, []);
     assert.deepEqual(await get("/api/users/branch/unknown"), []);
     assert.deepEqual(await get("/api/categories"), [
       { id: "haircut", name: "Cắt tóc" },

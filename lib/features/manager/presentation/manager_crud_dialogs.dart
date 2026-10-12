@@ -1,3 +1,4 @@
+import '../../../core/network/api_client.dart';
 import '../../../core/utils/category_labels.dart';
 
 import 'package:flutter/material.dart';
@@ -64,15 +65,26 @@ class ManagerCrudDialog extends StatefulWidget {
     this.service,
   }) : serviceProvider = provider,
        userProvider = null,
-       user = null;
+       user = null,
+       remoteSave = null;
   const ManagerCrudDialog.staff({
     super.key,
     required UserProvider provider,
     this.user,
   }) : userProvider = provider,
        serviceProvider = null,
-       service = null;
+       service = null,
+       remoteSave = null;
 
+  const ManagerCrudDialog.apiStaff({
+    super.key,
+    required Future<void> Function(Map<String, dynamic>) save,
+    this.user,
+  }) : remoteSave = save,
+       userProvider = null,
+       serviceProvider = null,
+       service = null;
+  final Future<void> Function(Map<String, dynamic>)? remoteSave;
   final ServiceProvider? serviceProvider;
   final UserProvider? userProvider;
   final Service? service;
@@ -93,6 +105,7 @@ class _ManagerCrudDialogState extends State<ManagerCrudDialog> {
   late final TextEditingController _address;
   late ServiceCategory _category;
   String? _error;
+  bool _saving = false;
   bool get _isService => widget.serviceProvider != null;
   bool get _isEditing => widget.service != null || widget.user != null;
 
@@ -144,14 +157,25 @@ class _ManagerCrudDialogState extends State<ManagerCrudDialog> {
     return null;
   }
 
-  void _save() {
+  Future<void> _save() async {
+    if (_saving) return;
     if (!_form.currentState!.validate()) return;
     if (!_isService && _specializedCategories.isEmpty) {
       setState(() => _error = 'Vui lòng chọn ít nhất một chuyên môn.');
       return;
     }
     try {
-      if (_isService) {
+      setState(() => _saving = true);
+      if (widget.remoteSave != null) {
+        await widget.remoteSave!({
+          'name': _name.text.trim(),
+          'email': _email.text.trim().toLowerCase(),
+          'phone': _phone.text.trim(),
+          'address': _address.text.trim(),
+          'specializedCategoryIds': _specializedCategories.toList(),
+        });
+        if (!mounted) return;
+      } else if (_isService) {
         final provider = widget.serviceProvider!;
         final existing = widget.service;
         final item =
@@ -204,12 +228,16 @@ class _ManagerCrudDialogState extends State<ManagerCrudDialog> {
         }
       }
       Navigator.pop(context);
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
     } on UnauthorizedException catch (error) {
       setState(() => _error = error.message);
     } on StateError {
       setState(() => _error = 'Dữ liệu đã thay đổi. Vui lòng kiểm tra lại.');
     } on ArgumentError {
       setState(() => _error = 'Thông tin không hợp lệ. Vui lòng kiểm tra lại.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -252,6 +280,11 @@ class _ManagerCrudDialogState extends State<ManagerCrudDialog> {
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Danh mục'),
                   items: ServiceCategory.values
+                      .where(
+                        (category) =>
+                            category != ServiceCategory.shaving ||
+                            category == widget.service?.category,
+                      )
                       .map(
                         (category) => DropdownMenuItem(
                           value: category,
@@ -297,28 +330,31 @@ class _ManagerCrudDialogState extends State<ManagerCrudDialog> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: context
-                      .watch<ServiceProvider>()
-                      .services
-                      .map((s) => s.category)
-                      .toSet()
-                      .map(
-                        (category) => FilterChip(
-                          label: Text(categoryLabel(category)),
-                          selected: _specializedCategories.contains(
-                            category.name,
-                          ),
-                          onSelected: (selected) => setState(() {
-                            if (selected) {
-                              _specializedCategories.add(category.name);
-                            } else {
-                              _specializedCategories.remove(category.name);
-                            }
-                            _error = null;
-                          }),
-                        ),
-                      )
-                      .toList(),
+                  children:
+                      (widget.remoteSave != null
+                              ? ServiceCategory.values.toSet()
+                              : context
+                                    .watch<ServiceProvider>()
+                                    .services
+                                    .map((s) => s.category)
+                                    .toSet())
+                          .map(
+                            (category) => FilterChip(
+                              label: Text(categoryLabel(category)),
+                              selected: _specializedCategories.contains(
+                                category.name,
+                              ),
+                              onSelected: (selected) => setState(() {
+                                if (selected) {
+                                  _specializedCategories.add(category.name);
+                                } else {
+                                  _specializedCategories.remove(category.name);
+                                }
+                                _error = null;
+                              }),
+                            ),
+                          )
+                          .toList(),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -334,10 +370,13 @@ class _ManagerCrudDialogState extends State<ManagerCrudDialog> {
     ),
     actions: [
       TextButton(
-        onPressed: () => Navigator.pop(context),
+        onPressed: _saving ? null : () => Navigator.pop(context),
         child: const Text('Hủy'),
       ),
-      FilledButton(onPressed: _save, child: const Text('Lưu')),
+      FilledButton(
+        onPressed: _saving ? null : _save,
+        child: Text(_saving ? 'Đang lưu…' : 'Lưu'),
+      ),
     ],
   );
 }

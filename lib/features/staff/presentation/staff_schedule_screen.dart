@@ -140,7 +140,7 @@ class StaffScheduleScreen extends StatelessWidget {
             style: TextStyle(
               color: item.status == AppointmentStatus.completed
                   ? const Color(0xFF238260)
-                  : const Color(0xFF757575),
+                  : const Color(0xFF817368),
             ),
           ),
           const SizedBox(height: 14),
@@ -189,7 +189,7 @@ class StaffScheduleScreen extends StatelessWidget {
       ),
     );
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         actions: [
           if (context.watch<AuthController>().isRemote)
@@ -205,7 +205,7 @@ class StaffScheduleScreen extends StatelessWidget {
             ),
         ],
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: const Color(0xFFFAF7F2),
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'Lịch làm việc hôm nay',
@@ -219,7 +219,7 @@ class StaffScheduleScreen extends StatelessWidget {
           children: [
             Text(
               '${day.day} tháng ${day.month}, ${day.year}',
-              style: const TextStyle(color: Color(0xFF757575)),
+              style: const TextStyle(color: Color(0xFF817368)),
             ),
             const SizedBox(height: 18),
             if (items.isEmpty) const Text('Hôm nay chưa có lịch hẹn.'),

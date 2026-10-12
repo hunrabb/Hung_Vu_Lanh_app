@@ -35,7 +35,7 @@ class BossMainScreen extends StatelessWidget {
     return Theme(
       data: Theme.of(context).copyWith(
         colorScheme: ColorScheme.fromSeed(seedColor: bossAccent),
-        scaffoldBackgroundColor: const Color(0xFFF3F6F5),
+        scaffoldBackgroundColor: const Color(0xFFFAF7F2),
       ),
       child: DefaultTabController(
         length: 6,

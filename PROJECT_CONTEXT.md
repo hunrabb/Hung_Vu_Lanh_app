@@ -1,5 +1,18 @@
 # PROJECT CONTEXT — Hệ thống Quản lý Chuỗi Cửa Hàng
 
+### UI salon, banners and hairstyle assets — 12/10/2026
+
+Shared ivory/espresso/champagne theme and neutral presentation palette cover
+customer, staff, manager and boss screens, forms, chips and sheets. Local PNG
+salon photography appears on authentication/Home banners and three hairstyle
+cards. Generated illustrative assets and exact prompts: assets/images/README.md.
+SalonCarousel advances after 3 seconds (450 ms transition), supports swipe/dots,
+pauses off-tab/in background, respects reduced motion and cancels on dispose.
+New booking and catalog presentation exclude shaving; the domain category and
+historical data remain supported. No backend or CRUD additions in this UI pass.
+Validation: flutter analyze --no-pub clean; 115 Flutter tests passed, 1 opt-in
+live integration test skipped. Carousel lifecycle and hidden shaving tested.
+
 **Cập nhật:** 07/10/2026 · **Dự án:** `C:\learnFlutter\ktgk`
 
 Tài liệu này ghi nhận nghiệp vụ đã chốt và hiện trạng triển khai để làm căn cứ cho
@@ -754,3 +767,22 @@ Approved leave có query khoảng bận cho Booking Engine Giai đoạn 4; khôn
 lịch khách đã đặt. Seed 70 ca cho 10 Staff approved, 7 ngày tiếp theo, phân bổ
 21/21/14/14 ở bốn cơ sở. Chi tiết API: backend/PHASE3_TESTING.md.
 
+
+### Giao diện chung — 12/10/2026
+
+Theme dùng chung tại lib/core/theme/app_theme.dart: tông nâu ấm, nền sáng, card trắng viền nhẹ, ô nhập bo góc, nút và dialog thống nhất. Thanh điều hướng Customer/Manager/Staff luôn hiện nhãn và dùng màu nâu. Giữ nguyên Provider, route, API và các màu trạng thái nghiệp vụ; không thêm dependency.
+
+
+### Manager Staff API và cấu hình backend — 12/10/2026
+
+Phiên API: ManagerStaffScreen dùng ApiManagerStaffScreen đọc users/branch/:id và tạo/sửa users/staff qua API; không fallback mock, có loading/error/retry và chặn response sau đổi phiên/dispose. Form không gửi role/branch/approval/password, chặn double-save. Không có xóa Manager vì backend chỉ cho Boss reject pending. Mock mode giữ luồng cũ. Các CRUD catalog/cơ sở và account forms khác vẫn chưa migrate.
+Backend hỗ trợ CORS_ORIGINS tùy chọn (origin cách nhau dấu phẩy); mặc định tương thích local. CA được resolve từ thư mục backend thay vì current working directory. SDK thực tế trên máy hiện tại nằm trong PATH tại D:\taixuong\flutter_windows_3.47.5-stable\flutter\bin.
+
+Danh sách Staff theo cơ sở và hàng chờ Boss trả thêm specializedCategoryIds từ bảng liên kết (batch query), giữ chuyên môn hiện tại khi sửa hồ sơ.
+
+
+### Nhận diện Barbershop/Spa — 12/10/2026
+
+Giao diện dùng nền ivory, nâu espresso và champagne. SalonBrandBanner/SalonArtwork trong lib/shared/widgets/salon_brand.dart dùng CustomPainter minh họa ghế barber, gương vòm và cây xanh, không ảnh mạng/dependency. Dùng ở Home và Login/Register; navigation có nền capsule cho tab đang chọn. Home đổi các thẻ marketing sang tông ấm, giữ nguyên trạng thái preview và nội dung mẫu. Boss đổi bảng màu cùng nhận diện. Chỉ thay UI, không đổi API/CRUD/booking guards.
+
+Kiểm tra UI: analyzer sạch; 113 Flutter tests pass, 1 live opt-in skipped. Đã render và xem Home/Login ở 390px và Home ở 1280px; ảnh preview tại artifacts/ui/.

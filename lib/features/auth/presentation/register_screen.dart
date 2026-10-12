@@ -1,3 +1,5 @@
+import '../../../shared/widgets/salon_brand.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -89,33 +91,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
-                      child: Container(
-                        width: 88,
-                        height: 88,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF30251F),
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        child: const Icon(
-                          Icons.content_cut,
-                          size: 42,
-                          color: Color(0xFFE6CCAA),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'BARBERSHOP & SPA',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 3,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF7B6756),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    const SalonBrandBanner(),
+                    const SizedBox(height: 28),
                     const Text(
                       'Join Us',
                       textAlign: TextAlign.center,
@@ -128,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Your next moment of care starts here.\nMake room for a little everyday luxury.',
+                      'Dành một khoảng nghỉ cho chính mình.\nTạo tài khoản để bắt đầu trải nghiệm.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
@@ -136,7 +113,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         color: Color(0xFF756B63),
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 28),
                     TextFormField(
                       controller: _nameController,
                       enabled: !auth.isLoading,
@@ -257,10 +234,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          textStyle: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                         // Khóa nút khi đang xử lý, tránh tạo tài khoản nhiều lần.
                         onPressed: auth.isLoading ? null : _register,

@@ -1,3 +1,5 @@
+import '../../../core/models/service.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -116,7 +118,7 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
     final services = context
         .watch<ServiceProvider>()
         .services
-        .where((s) => s.isActive)
+        .where((s) => s.isActive && s.category != ServiceCategory.shaving)
         .toList();
     final booking = context.watch<AppointmentProvider>();
     final serviceId = services.any((s) => s.id == _serviceId)
@@ -149,7 +151,7 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
         : [];
     final selected = slots.any((slot) => slot.start == _start);
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         title: Text(widget.walkIn ? 'Tạo lịch nhanh' : 'Đặt lịch'),
       ),

@@ -92,7 +92,7 @@ void main() {
     final service = Service(
       id: 'new',
       name: 'New service',
-      category: ServiceCategory.shaving,
+      category: ServiceCategory.haircut,
       durationMinutes: 20,
       priceVnd: 1234567,
     );
@@ -108,5 +108,16 @@ void main() {
     await tester.pump();
     expect(find.text('Updated service'), findsNothing);
     expect(find.text('0 dịch vụ · Chăm sóc & tạo kiểu'), findsOneWidget);
+    provider.add(
+      service.copyWith(
+        id: 'legacy-shaving',
+        name: 'Cạo râu',
+        category: ServiceCategory.shaving,
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Cạo râu'), findsNothing);
+    expect(find.text('0 dịch vụ · Chăm sóc & tạo kiểu'), findsOneWidget);
+    expect(provider.getById('legacy-shaving'), isNotNull);
   });
 }

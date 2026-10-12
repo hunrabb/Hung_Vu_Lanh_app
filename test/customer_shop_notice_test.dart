@@ -28,6 +28,7 @@ void main() {
       final context = tester.element(find.byType(CustomerHomeScreen));
       final shop = context.read<ShopSettingsProvider>();
       final booking = context.read<AppointmentProvider>();
+      await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
       await tester.tap(find.byType(DropdownButtonFormField<String>));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Cơ sở Cầu Giấy').last);

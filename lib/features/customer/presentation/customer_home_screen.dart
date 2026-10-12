@@ -1,3 +1,7 @@
+import '../../../core/theme/salon_assets.dart';
+import '../../../shared/widgets/salon_carousel.dart';
+import '../../../shared/widgets/salon_brand.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -22,15 +26,21 @@ class CustomerHomeScreen extends StatefulWidget {
     this.promotions = const [
       Promotion(
         id: 'member',
-        title: 'Giảm giá 20%\ncho thành viên mới',
-        subtitle: 'Khởi đầu hành trình chăm sóc của bạn.',
-        imageUrl: '',
+        title: 'Một diện mạo mới\ncho ngày của bạn',
+        subtitle: 'Khám phá kiểu tóc phù hợp với bạn.',
+        imageUrl: SalonAssets.crop,
       ),
       Promotion(
         id: 'care',
         title: 'Thư giãn trọn vẹn\nvới combo chăm sóc',
         subtitle: 'Một khoảng nghỉ, một diện mạo mới.',
-        imageUrl: '',
+        imageUrl: SalonAssets.interior,
+      ),
+      Promotion(
+        id: 'classic',
+        title: 'Lịch lãm mỗi ngày',
+        subtitle: 'Side part gọn gàng, phong cách tự tin.',
+        imageUrl: SalonAssets.classic,
       ),
     ],
   });
@@ -41,9 +51,9 @@ class CustomerHomeScreen extends StatefulWidget {
 }
 
 class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
-  static const _ink = Color(0xFF1A1A1A);
-  static const _gold = Color(0xFFD4AF37);
-  static const _muted = Color(0xFF757575);
+  static const _ink = Color(0xFF30251F);
+  static const _gold = Color(0xFFC5A16B);
+  static const _muted = Color(0xFF817368);
   static final _softShadow = [
     BoxShadow(
       color: Colors.black.withValues(alpha: 0.04),
@@ -51,7 +61,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       offset: const Offset(0, 8),
     ),
   ];
-  int _promoIndex = 0;
   String? _branchId;
 
   static const _categories = [
@@ -60,7 +69,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     (name: 'Uốn', icon: Icons.waves),
     (name: 'Nhuộm', icon: Icons.palette_outlined),
     (name: 'Massage', icon: Icons.spa_outlined),
-    (name: 'Cạo râu', icon: Icons.face_outlined),
   ];
   static const _barbers = [
     (name: 'Alex', initials: 'AL', rating: '4.8', specialty: 'Fade & styling'),
@@ -77,13 +85,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     (
       name: 'Mohican chéo',
       detail: 'Gọn gàng · Cá tính',
-      icon: Icons.bolt_outlined,
+      image: SalonAssets.crop,
     ),
-    (name: 'Layer uốn', detail: 'Tự nhiên · Bồng bềnh', icon: Icons.waves),
+    (
+      name: 'Layer uốn',
+      detail: 'Tự nhiên · Bồng bềnh',
+      image: SalonAssets.layer,
+    ),
     (
       name: 'Classic side part',
       detail: 'Lịch lãm · Tinh tế',
-      icon: Icons.auto_awesome,
+      image: SalonAssets.classic,
     ),
   ];
 
@@ -205,6 +217,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   const SizedBox(height: 18),
                 ],
                 _header(name),
+                const SizedBox(height: 22),
+                const SalonBrandBanner(compact: true),
+                const SizedBox(height: 10),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   key: ValueKey('home-branch-$branchId'),
@@ -212,6 +227,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Cơ sở tại Hà Nội',
+                    prefixIcon: Icon(Icons.storefront_outlined),
                   ),
                   items: branches
                       .map(
@@ -278,7 +294,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 const SizedBox(height: 18),
                 _barberList(),
                 const SizedBox(height: 32),
-                _section('Một diện mạo mới', 'Kiểu tóc thịnh hành'),
+                _section(
+                  'Một diện mạo mới',
+                  'Bộ sưu tập kiểu tóc · Ảnh minh họa',
+                ),
                 const SizedBox(height: 18),
                 _inspiration(),
                 const SizedBox(height: 28),
@@ -381,7 +400,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       hintStyle: const TextStyle(fontSize: 13, color: _muted),
       prefixIcon: const Icon(Icons.search_rounded, color: _muted),
       filled: true,
-      fillColor: const Color(0xFFF2F2F2),
+      fillColor: const Color(0xFFF0EAE2),
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
@@ -495,44 +514,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   );
 
   Widget _promotions(List<Promotion> promotions) => LayoutBuilder(
-    builder: (context, constraints) => Column(
-      children: [
-        SizedBox(
-          // Thêm chỗ cho tiêu đề xuống dòng trên điện thoại nhỏ.
-          height: constraints.maxWidth < 340 ? 330 : 280,
-          child: PageView(
-            onPageChanged: (index) => setState(() => _promoIndex = index),
-            children: promotions
-                .map(
-                  (promotion) => _promo(
-                    'ƯU ĐÃI THÀNH VIÊN',
-                    promotion.title,
-                    promotion.subtitle,
-                    const Color(0xFF1A1A1A),
-                    const Color(0xFF454545),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            promotions.length,
-            (index) => AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: _promoIndex == index ? 22 : 6,
-              height: 6,
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              decoration: BoxDecoration(
-                color: _promoIndex == index ? _gold : const Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.circular(4),
-              ),
+    builder: (context, constraints) => SalonCarousel(
+      height: constraints.maxWidth < 340 ? 340 : 290,
+      children: promotions
+          .map(
+            (promotion) => _promo(
+              'BARBERSHOP & SPA',
+              promotion.title,
+              promotion.subtitle,
+              const Color(0xFF30251F),
+              const Color(0xFF695442),
+              promotion.imageUrl,
             ),
-          ),
-        ),
-      ],
+          )
+          .toList(),
     ),
   );
 
@@ -542,11 +537,23 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     String subtitle,
     Color start,
     Color end,
+    String imageAsset,
   ) => Container(
     margin: const EdgeInsets.symmetric(horizontal: 2),
     padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(24),
+      image: imageAsset.startsWith('assets/')
+          ? DecorationImage(
+              image: AssetImage(imageAsset),
+              fit: BoxFit.cover,
+              alignment: const Alignment(0.5, -0.5),
+              colorFilter: ColorFilter.mode(
+                Colors.black.withValues(alpha: 0.60),
+                BlendMode.darken,
+              ),
+            )
+          : null,
       gradient: LinearGradient(
         colors: [start, end],
         begin: Alignment.topLeft,
@@ -565,12 +572,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 style: const TextStyle(
                   fontSize: 9,
                   letterSpacing: 2,
-                  color: Color(0xFFD4AF37),
+                  color: Color(0xFFC5A16B),
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            const Icon(Icons.auto_awesome, color: Color(0xFFD4AF37), size: 24),
+            const Icon(Icons.auto_awesome, color: Color(0xFFC5A16B), size: 24),
           ],
         ),
         const SizedBox(height: 12),
@@ -596,7 +603,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         const SizedBox(height: 14),
         FilledButton.icon(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFD4AF37),
+            backgroundColor: const Color(0xFFC5A16B),
             foregroundColor: _ink,
           ),
           onPressed: _closedToday ? null : _openBooking,
@@ -624,7 +631,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 width: 68,
                 height: 68,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: const Color(0xFFFFFCF7),
+                  border: Border.all(color: const Color(0xFFE7DCCB)),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: _softShadow,
                 ),
@@ -675,7 +683,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 fontSize: 38,
                 letterSpacing: -1,
                 fontWeight: FontWeight.w300,
-                color: Color(0xFF8E8E8E),
+                color: Color(0xFF695442),
               ),
             ),
             onTap: () => _preview('${barber.name} - ${barber.specialty}'),
@@ -698,11 +706,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           child: _portraitCard(
             title: style.name,
             subtitle: style.detail,
-            placeholder: Icon(
-              style.icon,
-              size: 48,
-              color: const Color(0xFF929292),
-            ),
+            imageAsset: style.image,
+            placeholder: const Icon(Icons.content_cut, size: 48),
             onTap: () => _preview(style.name),
           ),
         );
@@ -717,6 +722,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     required Widget placeholder,
     required VoidCallback onTap,
     String? rating,
+    String? imageAsset,
   }) => Container(
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(16),
@@ -731,25 +737,37 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFF1F1F1), Color(0xFFC6C6C6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            if (imageAsset != null)
+              Image.asset(
+                imageAsset,
+                fit: BoxFit.cover,
+                alignment: const Alignment(0, -0.5),
+                semanticLabel: 'Ảnh minh họa kiểu tóc $title',
+                errorBuilder: (_, _, _) => const ColoredBox(
+                  color: Color(0xFFEFE4D4),
+                  child: SalonArtwork(),
                 ),
               ),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 48),
-                  child: placeholder,
+            if (imageAsset == null)
+              DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFEFE4D4), Color(0xFFAF9579)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 48),
+                    child: placeholder,
+                  ),
                 ),
               ),
-            ),
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.transparent, Color(0xDD000000)],
+                  colors: [Colors.transparent, Color(0xEE30251F)],
                   stops: [0.3, 1],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,

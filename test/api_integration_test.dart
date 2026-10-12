@@ -342,6 +342,7 @@ void main() {
         'boss@example.com',
       );
       await tester.enterText(find.byType(TextFormField).at(1), 'boss123');
+      await tester.ensureVisible(find.text('Login'));
       await tester.tap(find.text('Login'));
       await tester.pumpAndSettle();
       expect(find.text('Boss Dashboard'), findsOneWidget);

@@ -1,3 +1,4 @@
+import 'api_manager_staff_screen.dart';
 import '../../auth/application/auth_controller.dart';
 
 import 'package:flutter/material.dart';
@@ -33,21 +34,24 @@ class ManagerStaffScreen extends StatelessWidget {
     if (manager?.role != UserRole.manager || manager?.branchId == null) {
       return const Center(child: Text('Phiên Manager không hợp lệ.'));
     }
+    if (context.watch<AuthController>().isRemote) {
+      return const ApiManagerStaffScreen();
+    }
     final staff = context.watch<UserProvider>().getStaff(
       branchId: manager!.branchId,
     );
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: const Color(0xFFFAF7F2),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Text(
           'Quản lý Nhân viên',
           style: TextStyle(
             fontSize: 22,
-            color: Color(0xFF1A1A1A),
+            color: Color(0xFF30251F),
             fontWeight: FontWeight.w700,
             letterSpacing: -0.5,
           ),
@@ -56,7 +60,7 @@ class ManagerStaffScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         heroTag: 'admin-add-staff',
         tooltip: 'Thêm nhân viên',
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: const Color(0xFF30251F),
         foregroundColor: Colors.white,
         elevation: 2,
         onPressed: () => _edit(context),
@@ -83,7 +87,7 @@ class ManagerStaffScreen extends StatelessWidget {
                     SizedBox(height: 6),
                     Text(
                       '${staff.length} nhân viên',
-                      style: TextStyle(color: Color(0xFF757575), fontSize: 12),
+                      style: TextStyle(color: Color(0xFF817368), fontSize: 12),
                     ),
                     const ManagerLeavePanel(),
                     if (context.watch<AuthController>().isRemote)
@@ -120,10 +124,10 @@ class ManagerStaffScreen extends StatelessWidget {
                 minLeadingWidth: 36,
                 leading: CircleAvatar(
                   radius: 18,
-                  backgroundColor: const Color(0xFFF2F2F2),
+                  backgroundColor: const Color(0xFFF0EAE2),
                   child: Text(
                     person.name.isEmpty ? '?' : person.name.substring(0, 1),
-                    style: const TextStyle(color: Color(0xFF1A1A1A)),
+                    style: const TextStyle(color: Color(0xFF30251F)),
                   ),
                 ),
                 title: Text(
@@ -133,7 +137,7 @@ class ManagerStaffScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A1A),
+                    color: Color(0xFF30251F),
                   ),
                 ),
                 subtitle: Padding(
@@ -143,7 +147,7 @@ class ManagerStaffScreen extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11,
                       height: 1.5,
-                      color: Color(0xFF757575),
+                      color: Color(0xFF817368),
                     ),
                   ),
                 ),
@@ -155,7 +159,7 @@ class ManagerStaffScreen extends StatelessWidget {
                       icon: const Icon(
                         Icons.edit,
                         size: 18,
-                        color: Color(0xFF757575),
+                        color: Color(0xFF817368),
                       ),
                       onPressed: () => _edit(context, person),
                     ),

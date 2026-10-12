@@ -47,19 +47,23 @@ class ServiceCatalogScreen extends StatelessWidget {
         !readOnly &&
         context.watch<AuthController>().currentUser?.role ==
             UserRole.superAdmin;
-    final services = context.watch<ServiceProvider>().services;
+    final services = context
+        .watch<ServiceProvider>()
+        .services
+        .where((s) => s.category != ServiceCategory.shaving)
+        .toList();
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: const Color(0xFFFAF7F2),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Text(
           'Quản lý Dịch vụ',
           style: TextStyle(
             fontSize: 22,
-            color: Color(0xFF1A1A1A),
+            color: Color(0xFF30251F),
             fontWeight: FontWeight.w700,
             letterSpacing: -0.5,
           ),
@@ -69,7 +73,7 @@ class ServiceCatalogScreen extends StatelessWidget {
           ? FloatingActionButton(
               heroTag: 'admin-add-service',
               tooltip: 'Thêm dịch vụ',
-              backgroundColor: const Color(0xFF1A1A1A),
+              backgroundColor: const Color(0xFF30251F),
               foregroundColor: Colors.white,
               elevation: 2,
               onPressed: () => _edit(context),
@@ -84,7 +88,7 @@ class ServiceCatalogScreen extends StatelessWidget {
               padding: EdgeInsets.only(bottom: 24),
               child: Text(
                 '${services.length} dịch vụ · Chăm sóc & tạo kiểu',
-                style: TextStyle(fontSize: 12, color: Color(0xFF757575)),
+                style: TextStyle(fontSize: 12, color: Color(0xFF817368)),
               ),
             ),
             ...services.map(
@@ -111,7 +115,7 @@ class ServiceCatalogScreen extends StatelessWidget {
                                 Icon(
                                   _icon(service.category),
                                   size: 24,
-                                  color: const Color(0xFFD4AF37),
+                                  color: const Color(0xFFC5A16B),
                                 ),
                                 const SizedBox(height: 14),
                                 Text(
@@ -121,7 +125,7 @@ class ServiceCatalogScreen extends StatelessWidget {
                                     height: 1.3,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: -0.5,
-                                    color: Color(0xFF1A1A1A),
+                                    color: Color(0xFF30251F),
                                   ),
                                 ),
                               ],
@@ -134,7 +138,7 @@ class ServiceCatalogScreen extends StatelessWidget {
                               icon: const Icon(
                                 Icons.edit,
                                 size: 19,
-                                color: Color(0xFF757575),
+                                color: Color(0xFF817368),
                               ),
                             ),
                           if (canEdit)
@@ -169,14 +173,14 @@ class ServiceCatalogScreen extends StatelessWidget {
                               const Icon(
                                 Icons.schedule,
                                 size: 14,
-                                color: Color(0xFF757575),
+                                color: Color(0xFF817368),
                               ),
                               const SizedBox(width: 5),
                               Text(
                                 '${service.durationMinutes} phút',
                                 style: const TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFF757575),
+                                  color: Color(0xFF817368),
                                 ),
                               ),
                             ],

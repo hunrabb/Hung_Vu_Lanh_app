@@ -48,10 +48,10 @@ class _StaffCustomersScreenState extends State<StaffCustomersScreen> {
         : <StaffCustomerStats>[];
     final users = context.watch<UserProvider>();
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: const Color(0xFFFAF7F2),
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'Khách hàng của tôi',
@@ -80,7 +80,7 @@ class _StaffCustomersScreenState extends State<StaffCustomersScreen> {
             if (valid) StaffRevenueSummary(provider: provider),
             const Text(
               'Danh sách khách hàng của bạn',
-              style: TextStyle(color: Color(0xFF757575)),
+              style: TextStyle(color: Color(0xFF817368)),
             ),
             const SizedBox(height: 18),
             Text('Sắp xếp: ${_label(_sort)}'),
@@ -121,7 +121,7 @@ class _StaffCustomersScreenState extends State<StaffCustomersScreen> {
                         'Lần ghé gần nhất: ${date.day}/${date.month}/${date.year}',
                         style: const TextStyle(
                           fontSize: 11,
-                          color: Color(0xFF757575),
+                          color: Color(0xFF817368),
                         ),
                       ),
                       const SizedBox(height: 6),

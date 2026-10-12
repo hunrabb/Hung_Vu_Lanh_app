@@ -111,7 +111,7 @@ class ClosedDatesScreen extends StatelessWidget {
     final dates = provider.closedDates;
     final branchId = provider.currentBranchId;
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(title: const Text('Cấu hình ngày nghỉ')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _add(context),

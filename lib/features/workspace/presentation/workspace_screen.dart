@@ -58,7 +58,7 @@ class WorkspaceScreen extends StatelessWidget {
   Widget build(BuildContext context) => DefaultTabController(
     length: 2,
     child: Scaffold(
-      backgroundColor: const Color(0xFFFAF8F4),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         title: const Text('Ca làm & Nghỉ phép'),
         bottom: const TabBar(

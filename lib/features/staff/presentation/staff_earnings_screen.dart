@@ -120,11 +120,11 @@ class StaffEarningsScreen extends StatelessWidget {
     final users = context.watch<UserProvider>();
     final rows = provider.ownCompletedAppointments();
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text('Thu nhập của tôi'),
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: const Color(0xFFFAF7F2),
         surfaceTintColor: Colors.transparent,
       ),
       body: ListView.builder(

@@ -18,10 +18,10 @@ class ManagerSettingsScreen extends StatelessWidget {
     VoidCallback? onTap,
   }) => ListTile(
     contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-    leading: Icon(icon, size: 22, color: const Color(0xFF757575)),
+    leading: Icon(icon, size: 22, color: const Color(0xFF817368)),
     title: Text(
       label,
-      style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
+      style: const TextStyle(fontSize: 14, color: Color(0xFF30251F)),
     ),
     trailing: const Icon(
       Icons.chevron_right,
@@ -48,17 +48,17 @@ class ManagerSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFFAFAFA),
+    backgroundColor: const Color(0xFFFAF7F2),
     appBar: AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       title: const Text(
         'Cài đặt cơ sở',
         style: TextStyle(
           fontSize: 22,
-          color: Color(0xFF1A1A1A),
+          color: Color(0xFF30251F),
           fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
         ),
@@ -80,7 +80,7 @@ class ManagerSettingsScreen extends StatelessWidget {
                       fontSize: 11,
                       letterSpacing: 1.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF757575),
+                      color: Color(0xFF817368),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -106,7 +106,7 @@ class ManagerSettingsScreen extends StatelessWidget {
                       height: 1,
                       indent: 18,
                       endIndent: 18,
-                      color: Color(0xFFF2F2F2),
+                      color: Color(0xFFF0EAE2),
                     ),
                     _option(
                       context,
@@ -132,7 +132,7 @@ class ManagerSettingsScreen extends StatelessWidget {
                       fontSize: 11,
                       letterSpacing: 1.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF757575),
+                      color: Color(0xFF817368),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -152,7 +152,7 @@ class ManagerSettingsScreen extends StatelessWidget {
                       height: 1,
                       indent: 18,
                       endIndent: 18,
-                      color: Color(0xFFF2F2F2),
+                      color: Color(0xFFF0EAE2),
                     ),
                     _option(
                       context,

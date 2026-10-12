@@ -16,7 +16,7 @@ class ApiAppointmentsScreen extends StatelessWidget {
     final p = c.watch<ApiAppointmentProvider>();
     final user = c.watch<AuthController>().currentUser;
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFFAF7F2),
       appBar: AppBar(
         title: Text(
           user?.role == UserRole.staff ? 'Lịch làm việc' : 'Lịch hẹn',

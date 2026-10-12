@@ -1,4 +1,5 @@
 import 'core/security/access_scope.dart';
+import 'core/theme/app_theme.dart';
 import 'features/branches/data/mock_branch_repository.dart';
 import 'features/branches/application/branch_provider.dart';
 
@@ -212,7 +213,7 @@ class _AppNavigatorState extends State<_AppNavigator> {
     navigatorKey: _navigator,
     title: 'Barbershop & Spa',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
+    theme: AppTheme.light,
     initialRoute: AppRoutes.login,
     onGenerateRoute: AppRouter.generateRoute,
   );

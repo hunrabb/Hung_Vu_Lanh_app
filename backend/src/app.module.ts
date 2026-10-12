@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { BranchesModule } from "./branches/branches.module";
 import { UsersModule } from "./users/users.module";
 import { CategoriesModule } from "./categories/categories.module";
@@ -28,7 +29,7 @@ import { ReportsModule } from "./reports/reports.module";
         password: config.getOrThrow<string>("DB_PASSWORD"),
         ssl: {
           rejectUnauthorized: true,
-          ca: fs.readFileSync("./ca.pem").toString(),
+          ca: fs.readFileSync(path.resolve(__dirname, "../ca.pem")).toString(),
         },
         autoLoadEntities: true,
         synchronize: false,

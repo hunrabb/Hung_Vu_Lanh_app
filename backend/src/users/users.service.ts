@@ -7,7 +7,7 @@ import {
 } from "@nestjs/common";
 import { Actor } from "../auth/auth.decorators";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { User } from "./user.entity";
 import { randomUUID } from "node:crypto";
 import { Credential } from "../auth/credential.entity";
@@ -161,12 +161,29 @@ export class UsersService {
     );
   }
 
+  private async withSpecialties(rows: User[]) {
+    if (!rows.length) return [];
+    const links = await this.users.manager.findBy(StaffSpecialization, {
+      staffId: In(rows.map((row) => row.id)),
+    });
+    const grouped = new Map<string, string[]>();
+    for (const link of links) {
+      const ids = grouped.get(link.staffId) ?? [];
+      ids.push(link.categoryId);
+      grouped.set(link.staffId, ids);
+    }
+    return rows.map((row) => ({
+      ...row,
+      specializedCategoryIds: (grouped.get(row.id) ?? []).sort(),
+    }));
+  }
+
   findPendingStaff(actor: Actor): Promise<User[]> {
     if (actor?.role !== "superAdmin") throw new ForbiddenException();
     return this.users.find({
       where: { role: "staff", isApproved: false },
       order: { createdAt: "ASC", id: "ASC" },
-    });
+    }).then((rows) => this.withSpecialties(rows));
   }
 
   findStaffByBranch(branchId: string, actor: Actor): Promise<User[]> {
@@ -178,6 +195,6 @@ export class UsersService {
     return this.users.find({
       where: { role: "staff", branchId },
       order: { name: "ASC", id: "ASC" },
-    });
+    }).then((rows) => this.withSpecialties(rows));
   }
 }
