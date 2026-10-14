@@ -28,13 +28,13 @@ abstract final class AppTheme {
         displayColor: ink,
       ),
       iconTheme: const IconThemeData(color: primary),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: ink,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 1,
-        titleTextStyle: TextStyle(
+        titleTextStyle: ThemeData.light().textTheme.titleLarge!.copyWith(
           color: ink,
           fontSize: 21,
           fontWeight: FontWeight.w700,
@@ -97,7 +97,10 @@ abstract final class AppTheme {
         selectedColor: const Color(0xFFEDE3D7),
         side: const BorderSide(color: outline),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        labelStyle: const TextStyle(color: ink, fontWeight: FontWeight.w500),
+        labelStyle: ThemeData.light().textTheme.labelLarge!.copyWith(
+          color: ink,
+          fontWeight: FontWeight.w500,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       ),
       listTileTheme: const ListTileThemeData(

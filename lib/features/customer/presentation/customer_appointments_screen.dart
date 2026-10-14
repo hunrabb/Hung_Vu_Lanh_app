@@ -7,9 +7,10 @@ import 'package:provider/provider.dart';
 
 import '../../../core/models/appointment.dart';
 import '../../../core/routing/app_routes.dart';
-import '../../../shared/widgets/custom_button.dart';
 import '../../booking/application/appointment_provider.dart';
 import '../../booking/presentation/api_appointments_screen.dart';
+import '../../booking/presentation/booking_banner.dart';
+import '../../reviews/presentation/reviews_screen.dart';
 import '../../users/application/user_provider.dart';
 
 class CustomerAppointmentsScreen extends StatelessWidget {
@@ -77,12 +78,38 @@ class CustomerAppointmentsScreen extends StatelessWidget {
                 onPressed: () => _cancel(context, item.id),
                 child: const Text('Hủy lịch'),
               )
-            else
+            else ...[
+              if (item.status == AppointmentStatus.completed)
+                TextButton.icon(
+                  onPressed: () => Navigator.pushNamed(
+                    context,
+                    AppRoutes.reviews,
+                    arguments: ReviewsArguments(
+                      branchId: item.branchId,
+                      staffId: item.staffId,
+                      appointmentId: item.id,
+                      branchName:
+                          context
+                              .read<BranchProvider>()
+                              .getById(item.branchId)
+                              ?.name ??
+                          'Cơ sở',
+                      staffName: visibleUserName(
+                        users,
+                        item.staffId,
+                        'Thợ cắt',
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.star_outline),
+                  label: const Text('Đánh giá'),
+                ),
               IconButton(
                 tooltip: 'Xóa lịch sử',
                 onPressed: () => _hide(context, item.id),
                 icon: const Icon(Icons.delete_outline),
               ),
+            ],
           ],
         ),
       ),
@@ -150,6 +177,10 @@ class CustomerAppointmentsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          BookingBanner(
+            onBook: () => Navigator.of(context).pushNamed(AppRoutes.booking),
+          ),
+          const SizedBox(height: 24),
           if (upcoming.isEmpty && history.isEmpty) ...[
             const Icon(
               Icons.calendar_today_outlined,
@@ -159,11 +190,6 @@ class CustomerAppointmentsScreen extends StatelessWidget {
             const SizedBox(height: 20),
             const Text('Bạn chưa có lịch hẹn nào', textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            CustomButton(
-              label: 'Đặt lịch ngay',
-              onPressed: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.booking),
-            ),
           ] else ...[
             Text(
               'Sắp tới (${upcoming.length})',

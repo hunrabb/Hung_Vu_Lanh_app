@@ -12,6 +12,8 @@ import '../../../core/models/app_user.dart';
 import '../../booking/application/appointment_provider.dart';
 import '../../workspace/presentation/workspace_screen.dart';
 import '../../reports/presentation/api_profile_stats.dart';
+import '../../../shared/widgets/profile_identity_card.dart';
+import '../../../core/theme/app_theme.dart';
 
 class StaffProfileScreen extends StatelessWidget {
   const StaffProfileScreen({super.key});
@@ -88,154 +90,142 @@ class StaffProfileScreen extends StatelessWidget {
       ),
       body: SafeArea(
         top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-          children: [
-            const Center(
-              child: CircleAvatar(
-                radius: 42,
-                backgroundColor: Color(0xFF30251F),
-                child: Icon(Icons.person, size: 42, color: Color(0xFFE6CCAA)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              profile?.name ?? user.name,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF30251F),
-                fontSize: 21,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 5),
-            const Text(
-              'Thông tin hồ sơ nhân viên',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF817368), fontSize: 12),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              'Chuyên môn: ${categoryLabels(profile?.specializedCategoryIds ?? [])}',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF817368), fontSize: 13),
-            ),
-            const SizedBox(height: 22),
-            if (remote) const ApiProfileStats(),
-            if (!remote)
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatisticCard(
-                      value: '$count',
-                      label: 'Tổng số ca tháng này',
-                      icon: Icons.event_available_outlined,
-                    ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              children: [
+                ProfileIdentityCard(
+                  name: profile?.name ?? user.name,
+                  subtitle: 'Thông tin hồ sơ nhân viên',
+                  detail:
+                      'Chuyên môn: ${categoryLabels(profile?.specializedCategoryIds ?? [])}',
+                  badge: 'CHUYÊN VIÊN SALON',
+                ),
+                const SizedBox(height: 22),
+                if (remote) const ApiProfileStats(),
+                if (!remote)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatisticCard(
+                          value: '$count',
+                          label: 'Tổng số ca tháng này',
+                          icon: Icons.event_available_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatisticCard(
+                          value:
+                              rating?.toStringAsFixed(1) ?? 'Chưa có đánh giá',
+                          label: 'Đánh giá trung bình',
+                          icon: Icons.star_outline,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatisticCard(
-                      value: rating?.toStringAsFixed(1) ?? 'Chưa có đánh giá',
-                      label: 'Đánh giá trung bình',
-                      icon: Icons.star_outline,
-                    ),
+                const SizedBox(height: 22),
+                Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(
+                          Icons.lock_outline,
+                          color: Color(0xFF594536),
+                        ),
+                        title: const Text(
+                          'Đổi mật khẩu',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => showDialog<void>(
+                          context: context,
+                          builder: (_) =>
+                              OwnPasswordDialog(users: users, userId: user.id),
+                        ),
+                      ),
+                      const Divider(height: 1, indent: 56),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.event_busy_outlined,
+                          color: Color(0xFF594536),
+                        ),
+                        title: const Text(
+                          'Xin nghỉ phép',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _requestLeave(context, user.id),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            const SizedBox(height: 22),
-            Material(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(
-                      Icons.lock_outline,
-                      color: Color(0xFF594536),
-                    ),
-                    title: const Text(
-                      'Đổi mật khẩu',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (_) =>
-                          OwnPasswordDialog(users: users, userId: user.id),
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.event_busy_outlined,
-                      color: Color(0xFF594536),
-                    ),
-                    title: const Text(
-                      'Xin nghỉ phép',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _requestLeave(context, user.id),
-                  ),
-                ],
-              ),
-            ),
-            if (requests.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Yêu cầu nghỉ phép của tôi',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: requests.map((request) {
-                        final key = request.date;
-                        final date = DateTime.parse(key);
-                        return Chip(
-                          label: Text(
-                            '${date.day}/${date.month}/${date.year} - ${leaveLabel(request.status)}',
+                ),
+                if (requests.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Yêu cầu nghỉ phép của tôi',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: requests.map((request) {
+                            final key = request.date;
+                            final date = DateTime.parse(key);
+                            return Chip(
+                              label: Text(
+                                '${date.day}/${date.month}/${date.year} - ${leaveLabel(request.status)}',
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const Text(
+                          'Ngày được duyệt sẽ chặn lịch mới. Các ca đã đặt vẫn giữ nguyên.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF817368),
                           ),
-                        );
-                      }).toList(),
+                        ),
+                      ],
                     ),
-                    const Text(
-                      'Ngày được duyệt sẽ chặn lịch mới. Các ca đã đặt vẫn giữ nguyên.',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF817368)),
+                  ),
+                if (remote) const ApiLeavePanel(own: true),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      side: const BorderSide(color: AppTheme.outline),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
-                  ],
-                ),
-              ),
-            if (remote) const ApiLeavePanel(own: true),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFB94747),
-                  side: const BorderSide(color: Color(0xFFE0B7B7)),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      context.read<AuthController>().signOut();
+                      Navigator.of(
+                        context,
+                      ).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
+                    },
+                    icon: const Icon(Icons.logout, size: 19),
+                    label: const Text('Đăng xuất'),
                   ),
                 ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).clearSnackBars();
-                  context.read<AuthController>().signOut();
-                  Navigator.of(context)
-                      .pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
-                },
-                icon: const Icon(Icons.logout, size: 19),
-                label: const Text('Đăng xuất'),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -259,6 +249,7 @@ class _StatisticCard extends StatelessWidget {
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
       color: Colors.white,
+      border: Border.all(color: AppTheme.outline),
       borderRadius: BorderRadius.circular(18),
       boxShadow: [
         BoxShadow(

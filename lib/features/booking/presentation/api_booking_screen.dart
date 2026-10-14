@@ -3,9 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_money.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../workspace/presentation/workspace_screen.dart' show stamp, hanoi;
 import '../application/api_appointment_provider.dart';
+import 'booking_layout.dart';
+import 'booking_calendar.dart';
 
 const bookingConflict =
     'Khung giờ này vừa có người đặt, vui lòng chọn giờ khác!';
@@ -15,9 +18,11 @@ class ApiBookingScreen extends StatefulWidget {
     super.key,
     this.walkIn = false,
     this.initialBranchId,
+    this.initialServiceId,
   });
   final bool walkIn;
   final String? initialBranchId;
+  final String? initialServiceId;
   @override
   State<ApiBookingScreen> createState() => _ApiBookingScreenState();
 }
@@ -33,6 +38,7 @@ class _ApiBookingScreenState extends State<ApiBookingScreen> {
   void initState() {
     super.initState();
     _branch = widget.initialBranchId;
+    _service = widget.initialServiceId;
     final now = hanoi(DateTime.now());
     _date = DateTime(now.year, now.month, now.day);
     Future.microtask(_init);
@@ -41,6 +47,14 @@ class _ApiBookingScreenState extends State<ApiBookingScreen> {
   Future<void> _init() async {
     try {
       await context.read<ApiAppointmentProvider>().catalog();
+      if (!mounted) return;
+      final p = context.read<ApiAppointmentProvider>();
+      if (!p.services.any(
+        (s) => s['id'] == _service && s['categoryId'] != 'shaving',
+      )) {
+        _service = null;
+      }
+      if (_branch != null && _service != null) await _select();
     } catch (e) {
       if (mounted) _error = e.toString();
     } finally {
@@ -111,9 +125,14 @@ class _ApiBookingScreenState extends State<ApiBookingScreen> {
     final branch = widget.walkIn ? user?.branchId : _branch;
     final owner = user?.id;
     if (branch == null || owner == null) return;
+    final sessionRevision = p.repo.api.tokens.revision;
+    bool currentSession() =>
+        mounted &&
+        auth.currentUser?.id == owner &&
+        p.repo.api.tokens.revision == sessionRevision;
     setState(() => _sending = true);
     try {
-      await p.repo.book(
+      final created = await p.repo.book(
         branch: branch,
         staff: _staff!,
         service: _service!,
@@ -121,19 +140,20 @@ class _ApiBookingScreenState extends State<ApiBookingScreen> {
         walkIn: widget.walkIn,
         contact: _contact.text,
       );
-      if (!mounted || auth.currentUser?.id != owner) return;
-      p.recordMutation();
+      if (!mounted || !currentSession()) return;
+      p.acceptBooking(created);
       await p.refresh();
-      if (!mounted) return;
+      if (!mounted || !currentSession()) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Đặt lịch thành công!')));
       if (widget.walkIn) {
         Navigator.pop(context);
       } else {
-        await _select(staffChanged: true);
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil(AppRoutes.customerHome, (_) => false);
       }
     } on ApiException catch (e) {
-      if (!mounted || auth.currentUser?.id != owner) return;
+      if (!mounted || !currentSession()) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.statusCode == 409 ? bookingConflict : e.message),
@@ -141,7 +161,7 @@ class _ApiBookingScreenState extends State<ApiBookingScreen> {
       );
       if (e.statusCode == 409) await _select(staffChanged: true);
     } catch (_) {
-      if (mounted) {
+      if (mounted && currentSession()) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Không thể đặt lịch. Vui lòng thử lại.'),
@@ -149,7 +169,7 @@ class _ApiBookingScreenState extends State<ApiBookingScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _sending = false);
+      if (currentSession()) setState(() => _sending = false);
     }
   }
 
@@ -159,157 +179,203 @@ class _ApiBookingScreenState extends State<ApiBookingScreen> {
     final branch = widget.walkIn
         ? c.watch<AuthController>().currentUser?.branchId
         : _branch;
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
-      appBar: AppBar(
-        title: Text(widget.walkIn ? 'Tạo lịch nhanh' : 'Đặt lịch'),
+    final chosenServices = p.services.where((s) => s['id'] == _service);
+    final service = chosenServices.isEmpty ? null : chosenServices.first;
+    return BookingLayout(
+      walkIn: widget.walkIn,
+      price: service == null ? null : ApiMoney.formatVnd(service['price']),
+      summary: _start == null ? null : stamp(DateTime.parse(_start!)),
+      confirm: FilledButton(
+        onPressed: _sending || _loading || _start == null ? null : _book,
+        child: _sending
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Xác nhận đặt lịch'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          DropdownButtonFormField<String>(
-            key: ValueKey('branch-$branch'),
-            initialValue: p.branches.any((b) => b['id'] == branch)
-                ? branch
-                : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Cơ sở tại Hà Nội'),
-            items: p.branches
-                .map(
-                  (b) => DropdownMenuItem(
-                    value: b['id'] as String,
-                    child: Text(b['name'] as String),
-                  ),
-                )
-                .toList(),
-            onChanged: widget.walkIn || _sending
-                ? null
-                : (id) {
-                    _branch = id;
-                    _select();
-                  },
-          ),
-          if (widget.walkIn)
-            TextField(
-              controller: _contact,
-              enabled: !_sending,
+      children: [
+        BookingSection(
+          number: '01',
+          title: 'Chọn không gian của bạn',
+          children: [
+            DropdownButtonFormField<String>(
+              key: ValueKey('branch-$branch'),
+              initialValue: p.branches.any((b) => b['id'] == branch)
+                  ? branch
+                  : null,
+              isExpanded: true,
               decoration: const InputDecoration(
-                labelText: 'Tên / SĐT Khách hàng',
+                labelText: 'Cơ sở tại Hà Nội',
+                prefixIcon: Icon(Icons.storefront_outlined),
               ),
-            ),
-          const SizedBox(height: 20),
-          DropdownButtonFormField<String>(
-            initialValue: _service,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Dịch vụ'),
-            items: p.services
-                .where((s) => s['categoryId'] != 'shaving')
-                .map(
-                  (s) => DropdownMenuItem(
-                    value: s['id'] as String,
-                    child: Text(
-                      '${s['name']} · ${ApiMoney.bigInt(s['price'])}đ · ${s['duration']} phút',
+              items: p.branches
+                  .map(
+                    (b) => DropdownMenuItem(
+                      value: b['id'] as String,
+                      child: Text(
+                        b['name'] as String,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                )
-                .toList(),
-            onChanged: branch == null || _sending
-                ? null
-                : (id) {
-                    _service = id;
-                    _select();
-                  },
-          ),
-          const SizedBox(height: 20),
-          DropdownButtonFormField<String>(
-            key: ValueKey('staff-$_staff-$_service-$branch'),
-            initialValue: _staff,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Chọn thợ'),
-            items: _people
-                .map(
-                  (s) => DropdownMenuItem(
-                    value: s['id'] as String,
-                    child: Text(s['name'] as String),
-                  ),
-                )
-                .toList(),
-            onChanged: _loading || _sending || _service == null
-                ? null
-                : (id) {
-                    _staff = id;
-                    _select(staffChanged: true);
-                  },
-          ),
-          TextButton.icon(
-            onPressed: _sending
-                ? null
-                : () async {
-                    final today = hanoi(DateTime.now());
-                    final day = DateTime(today.year, today.month, today.day);
-                    final date = await showDatePicker(
-                      context: c,
-                      initialDate: _date,
-                      firstDate: day,
-                      lastDate: day.add(const Duration(days: 365)),
-                    );
-                    if (date != null && mounted) {
-                      _date = date;
-                      await _select(staffChanged: true);
-                    }
-                  },
-            icon: const Icon(Icons.calendar_month_outlined),
-            label: Text('Ngày: ${_date.day}/${_date.month}/${_date.year}'),
-          ),
-          if (_loading) const LinearProgressIndicator(),
-          if (_error != null) Text(_error!),
-          if (_error != null)
-            TextButton(
+                  )
+                  .toList(),
+              onChanged: widget.walkIn || _sending
+                  ? null
+                  : (id) {
+                      _branch = id;
+                      _select();
+                    },
+            ),
+            if (widget.walkIn) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _contact,
+                enabled: !_sending,
+                decoration: const InputDecoration(
+                  labelText: 'Tên / SĐT Khách hàng',
+                ),
+              ),
+            ],
+          ],
+        ),
+        BookingSection(
+          number: '02',
+          title: 'Dịch vụ & chuyên viên',
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _service,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Dịch vụ',
+                prefixIcon: Icon(Icons.content_cut_outlined),
+              ),
+              items: p.services
+                  .where((s) => s['categoryId'] != 'shaving')
+                  .map(
+                    (s) => DropdownMenuItem(
+                      value: s['id'] as String,
+                      child: Text(
+                        '${s['name']} · ${ApiMoney.formatVnd(s['price'])} · ${s['duration']} phút',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: branch == null || _sending
+                  ? null
+                  : (id) {
+                      _service = id;
+                      _select();
+                    },
+            ),
+            const SizedBox(height: 20),
+            DropdownButtonFormField<String>(
+              key: ValueKey('staff-$_staff-$_service-$branch'),
+              initialValue: _staff,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Chọn thợ',
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+              items: _people
+                  .map(
+                    (s) => DropdownMenuItem(
+                      value: s['id'] as String,
+                      child: Text(s['name'] as String),
+                    ),
+                  )
+                  .toList(),
+              onChanged: _loading || _sending || _service == null
+                  ? null
+                  : (id) {
+                      _staff = id;
+                      _select(staffChanged: true);
+                    },
+            ),
+          ],
+        ),
+        BookingSection(
+          number: '03',
+          title: 'Ngày & giờ hẹn',
+          children: [
+            OutlinedButton.icon(
               onPressed: _sending
                   ? null
                   : () async {
-                      await _init();
-                      if (mounted && _service != null) {
+                      final today = hanoi(DateTime.now());
+                      final day = DateTime(today.year, today.month, today.day);
+                      final date = await showDatePicker(
+                        context: c,
+                        initialDate: _date,
+                        firstDate: day,
+                        lastDate: day.add(const Duration(days: 365)),
+                      );
+                      if (date != null && mounted) {
+                        _date = date;
                         await _select(staffChanged: true);
                       }
                     },
-              child: const Text('Thử lại'),
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: Text('Ngày: ${_date.day}/${_date.month}/${_date.year}'),
             ),
-          if (!_loading && _staff != null && _slots.isEmpty)
+            const SizedBox(height: 18),
+            BookingCalendar(
+              date: _date,
+              today: DateUtils.dateOnly(hanoi(DateTime.now())),
+              enabled: !_sending,
+              onChanged: (day) {
+                _date = day;
+                _select(staffChanged: true);
+              },
+            ),
             const Text(
-              'Không có khung giờ trống. Hãy chọn ngày hoặc thợ khác.',
+              'Giờ trống (giờ Việt Nam)',
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
-          Wrap(
-            spacing: 8,
-            children: _slots
-                .map(
-                  (s) => ChoiceChip(
-                    label: Text(stamp(DateTime.parse(s['startAt'] as String))),
-                    selected: _start == s['startAt'],
-                    onSelected: _sending
-                        ? null
-                        : (_) =>
-                              setState(() => _start = s['startAt'] as String),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _sending || _loading || _start == null ? null : _book,
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF30251F),
-            ),
-            child: _sending
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+            const SizedBox(height: 12),
+            if (_loading) const LinearProgressIndicator(),
+            if (_error != null) BookingNotice(_error!, error: true),
+            if (_error != null)
+              TextButton(
+                onPressed: _sending
+                    ? null
+                    : () async {
+                        await _init();
+                        if (mounted && _service != null) {
+                          await _select(staffChanged: true);
+                        }
+                      },
+                child: const Text('Thử lại'),
+              ),
+            if (!_loading && _staff != null && _slots.isEmpty)
+              const BookingNotice(
+                'Không có khung giờ trống. Hãy chọn ngày hoặc thợ khác.',
+              ),
+            if (!_loading && _staff == null)
+              const BookingNotice('Chọn dịch vụ và thợ để xem giờ trống.'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _slots
+                  .map(
+                    (s) => ChoiceChip(
+                      label: Text(
+                        stamp(DateTime.parse(s['startAt'] as String)),
+                      ),
+                      selected: _start == s['startAt'],
+                      onSelected: _sending
+                          ? null
+                          : (_) =>
+                                setState(() => _start = s['startAt'] as String),
+                    ),
                   )
-                : const Text('Xác nhận đặt lịch'),
-          ),
-        ],
-      ),
+                  .toList(),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

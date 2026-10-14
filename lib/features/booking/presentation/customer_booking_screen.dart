@@ -10,21 +10,28 @@ import '../application/appointment_provider.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../branches/application/branch_provider.dart';
 import 'api_booking_screen.dart';
+import 'booking_layout.dart';
+import 'booking_calendar.dart';
+import '../../../core/network/api_money.dart';
+import '../../../core/routing/app_routes.dart';
 
 class CustomerBookingScreen extends StatefulWidget {
   const CustomerBookingScreen({
     super.key,
     this.walkIn = false,
     this.initialBranchId,
+    this.initialServiceId,
   });
   final bool walkIn;
   final String? initialBranchId;
+  final String? initialServiceId;
   @override
   State<CustomerBookingScreen> createState() => _CustomerBookingScreenState();
 }
 
 class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
-  String? _serviceId, _staffId;
+  late String? _serviceId = widget.initialServiceId;
+  String? _staffId;
   late String? _branchId = widget.initialBranchId;
   DateTime? _date, _start;
   String? _error;
@@ -92,7 +99,12 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
       });
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Đặt lịch thành công!')));
-      if (widget.walkIn) Navigator.pop(context);
+      if (widget.walkIn) {
+        Navigator.pop(context);
+      } else {
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil(AppRoutes.customerHome, (_) => false);
+      }
     } on StateError catch (error) {
       setState(() {
         _start = null;
@@ -107,6 +119,7 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
       return ApiBookingScreen(
         walkIn: widget.walkIn,
         initialBranchId: widget.initialBranchId,
+        initialServiceId: widget.initialServiceId,
       );
     }
     final branches = context.watch<BranchProvider>().branches;
@@ -150,23 +163,41 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
           )
         : [];
     final selected = slots.any((slot) => slot.start == _start);
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
-      appBar: AppBar(
-        title: Text(widget.walkIn ? 'Tạo lịch nhanh' : 'Đặt lịch'),
+    return BookingLayout(
+      walkIn: widget.walkIn,
+      price: serviceId == null
+          ? null
+          : ApiMoney.formatVnd(
+              services.firstWhere((s) => s.id == serviceId).priceVnd.toString(),
+            ),
+      summary: selected
+          ? '${date.day}/${date.month}/${date.year} · ${_time(_start!)}'
+          : null,
+      confirm: FilledButton(
+        onPressed: selected && serviceId != null && staffId != null
+            ? _book
+            : null,
+        child: const Text('Xác nhận'),
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(24),
+      children: [
+        BookingSection(
+          number: '01',
+          title: 'Chọn không gian của bạn',
           children: [
             DropdownButtonFormField<String>(
               key: ValueKey('branch-$branchId'),
               initialValue: branchId,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Cơ sở tại Hà Nội'),
+              decoration: const InputDecoration(
+                labelText: 'Cơ sở tại Hà Nội',
+                prefixIcon: Icon(Icons.storefront_outlined),
+              ),
               items: branches
                   .map(
-                    (b) => DropdownMenuItem(value: b.id, child: Text(b.name)),
+                    (b) => DropdownMenuItem(
+                      value: b.id,
+                      child: Text(b.name, overflow: TextOverflow.ellipsis),
+                    ),
                   )
                   .toList(),
               onChanged: widget.walkIn
@@ -178,22 +209,30 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
                       _error = null;
                     }),
             ),
-            const SizedBox(height: 20),
             if (widget.walkIn) ...[
+              const SizedBox(height: 20),
               TextField(
                 controller: _contact,
                 decoration: const InputDecoration(
                   labelText: 'Tên / SĐT Khách hàng',
                 ),
               ),
-              const SizedBox(height: 20),
             ],
+          ],
+        ),
+        BookingSection(
+          number: '02',
+          title: 'Dịch vụ & chuyên viên',
+          children: [
             if (services.isEmpty) const Text('Chưa có dịch vụ đang hoạt động.'),
             DropdownButtonFormField<String>(
               key: ValueKey('service-$serviceId'),
               initialValue: serviceId,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Dịch vụ'),
+              decoration: const InputDecoration(
+                labelText: 'Dịch vụ',
+                prefixIcon: Icon(Icons.content_cut_outlined),
+              ),
               items: services
                   .map(
                     (s) => DropdownMenuItem(
@@ -221,11 +260,16 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
               const Text('Chọn dịch vụ trước khi chọn thợ.')
             else if (staff.isEmpty)
               const Text('Chưa có nhân viên phù hợp với dịch vụ này.'),
+            if (branchId == null || serviceId == null || staff.isEmpty)
+              const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               key: ValueKey('staff-$serviceId-$staffId'),
               initialValue: staffId,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Chọn thợ'),
+              decoration: const InputDecoration(
+                labelText: 'Chọn thợ',
+                prefixIcon: Icon(Icons.person_outline),
+              ),
               items: staff
                   .map(
                     (u) => DropdownMenuItem(value: u.id, child: Text(u.name)),
@@ -239,7 +283,12 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
                       _error = null;
                     }),
             ),
-            const SizedBox(height: 20),
+          ],
+        ),
+        BookingSection(
+          number: '03',
+          title: 'Ngày & giờ hẹn',
+          children: [
             OutlinedButton.icon(
               onPressed: _pickDate,
               icon: const Icon(Icons.calendar_month),
@@ -250,11 +299,22 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
               'Giờ trống (giờ Việt Nam)',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
+            BookingCalendar(
+              date: date,
+              today: booking.today,
+              onChanged: (day) {
+                setState(() {
+                  _date = day;
+                  _start = null;
+                  _error = null;
+                });
+              },
+            ),
             const SizedBox(height: 12),
             if (serviceId == null || staffId == null)
-              const Text('Chọn dịch vụ và thợ để xem giờ trống.')
+              const BookingNotice('Chọn dịch vụ và thợ để xem giờ trống.')
             else if (slots.isEmpty)
-              const Text('Không còn giờ trống trong ngày này.')
+              const BookingNotice('Không còn giờ trống trong ngày này.')
             else
               Wrap(
                 spacing: 8,
@@ -274,28 +334,10 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
                     )
                     .toList(),
               ),
-            if (serviceId != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(
-                  'Tổng tiền: ${services.firstWhere((s) => s.id == serviceId).priceVnd}đ',
-                ),
-              ),
-            if (_error != null)
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: selected && serviceId != null && staffId != null
-                  ? _book
-                  : null,
-              child: const Text('Xác nhận'),
-            ),
           ],
         ),
-      ),
+        if (_error != null) BookingNotice(_error!, error: true),
+      ],
     );
   }
 }

@@ -1,5 +1,14 @@
 # PRODUCT REQUIREMENTS DOCUMENT (PRD) - CHAIN MANAGEMENT BARBERSHOP/SPA
 
+Customer update 12/10/2026: Home must retain and show a newly booked appointment
+even if the subsequent list request fails. Booking includes an inline month
+calendar. Customer catalog pages show price, duration, illustrative process and
+samples, with booking preselection. Each branch has its own Manager (one per
+branch); Manager cannot operate another branch. Customers can independently rate
+the branch and assigned staff, once per target per owned completed appointment,
+with 1–5 stars and an optional comment. API reviews persist in PostgreSQL; mock
+reviews are RAM only. Details and deployment: ../CUSTOMER_FEATURES.md.
+
 **Cập nhật định hướng: 07/10/2026.** Sản phẩm chuyển từ đặt lịch một cửa hàng
 sang **Hệ thống Quản lý Chuỗi Cửa Hàng (Chain Management)**.
 Chi tiết schema, phân quyền, onboarding và hiện trạng code nằm trong

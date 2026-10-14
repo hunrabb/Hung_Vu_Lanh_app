@@ -10,6 +10,9 @@ import '../../features/schedule/presentation/staff_main.dart';
 import '../../features/manager/presentation/manager_main.dart';
 import '../../features/manager/presentation/manager_revenue_screen.dart';
 import 'app_routes.dart';
+import 'booking_arguments.dart';
+import '../../features/reviews/presentation/reviews_screen.dart';
+import '../../features/catalog/presentation/customer_services_screen.dart';
 import '../../features/boss/presentation/boss_main_screen.dart';
 import '../../features/booking/presentation/customer_booking_screen.dart';
 
@@ -40,6 +43,7 @@ abstract final class AppRouter {
       AppRoutes.boss => UserRole.superAdmin,
       AppRoutes.customerHome ||
       AppRoutes.services ||
+      AppRoutes.reviews ||
       AppRoutes.booking => UserRole.customer,
       AppRoutes.staffSchedule => UserRole.staff,
       AppRoutes.managerDashboard ||
@@ -56,9 +60,26 @@ abstract final class AppRouter {
     if (name == AppRoutes.login) return const LoginScreen();
     if (name == AppRoutes.register) return const RegisterScreen();
     if (name == AppRoutes.customerHome) return const CustomerMain();
+    if (name == AppRoutes.reviews && arguments is ReviewsArguments) {
+      return ReviewsScreen(arguments: arguments);
+    }
+    if (name == AppRoutes.services) {
+      return CustomerServicesScreen(
+        arguments: arguments is ServiceArguments
+            ? arguments
+            : const ServiceArguments(),
+      );
+    }
     if (name == AppRoutes.booking) {
       return CustomerBookingScreen(
-        initialBranchId: arguments is String ? arguments : null,
+        initialBranchId: arguments is String
+            ? arguments
+            : arguments is BookingArguments
+            ? arguments.branchId
+            : null,
+        initialServiceId: arguments is BookingArguments
+            ? arguments.serviceId
+            : null,
       );
     }
     if (name == AppRoutes.staffSchedule) return const StaffMain();

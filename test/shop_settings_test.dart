@@ -211,9 +211,13 @@ void main() {
           ),
         );
         final fields = find.byType(DropdownButtonFormField<String>);
+        await tester.ensureVisible(fields.at(1));
+        await tester.pumpAndSettle();
         await tester.tap(fields.at(1));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Combo Cắt + Gội · 45 phút').last);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(fields.last);
         await tester.pumpAndSettle();
         await tester.tap(fields.last);
         await tester.pumpAndSettle();

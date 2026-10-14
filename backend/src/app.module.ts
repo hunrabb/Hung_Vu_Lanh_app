@@ -13,6 +13,7 @@ import { StaffShiftsModule } from "./staff-shifts/staff-shifts.module";
 import { LeaveRequestsModule } from "./leave-requests/leave-requests.module";
 import { AppointmentsModule } from "./appointments/appointments.module";
 import { ReportsModule } from "./reports/reports.module";
+import { ReviewsModule } from "./reviews/reviews.module";
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { ReportsModule } from "./reports/reports.module";
     LeaveRequestsModule,
     AppointmentsModule,
     ReportsModule,
+    ReviewsModule,
   ],
 })
 export class AppModule {}

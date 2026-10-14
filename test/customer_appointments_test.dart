@@ -58,6 +58,7 @@ void main() {
       }
 
       await tester.ensureVisible(find.text('Hủy lịch'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Hủy lịch'));
       await tester.pumpAndSettle();
       await tab(Icons.calendar_today_outlined);
@@ -91,9 +92,19 @@ void main() {
       expect(find.text('Gội đầu thư giãn'), findsOneWidget);
       await tab(Icons.calendar_today_outlined);
       await tester.ensureVisible(find.text('Hủy lịch'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Hủy lịch'));
       await tester.pumpAndSettle();
-      await tester.drag(find.byType(ListView), const Offset(0, 1000));
+      await tester.scrollUntilVisible(
+        find.text('Lịch sử (2)'),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(CustomerAppointmentsScreen),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await tester.pumpAndSettle();
       expect(find.text('Lịch sử (2)'), findsOneWidget);
       expect(find.text('Hủy lịch'), findsNothing);

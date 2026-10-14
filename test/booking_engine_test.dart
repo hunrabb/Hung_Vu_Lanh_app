@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:ktgk/core/models/appointment.dart';
 import 'package:ktgk/core/models/shop_settings.dart';
+import 'package:ktgk/core/routing/app_routes.dart';
+import 'package:ktgk/features/customer/presentation/customer_main.dart';
 import 'package:ktgk/features/booking/application/appointment_provider.dart';
 import 'package:ktgk/features/booking/data/mock_appointment_repository.dart';
 import 'package:ktgk/features/booking/presentation/customer_booking_screen.dart';
@@ -191,20 +193,27 @@ void main() {
             ChangeNotifierProvider.value(value: users),
             ChangeNotifierProvider.value(value: booking),
           ],
-          child: const MaterialApp(
-            home: CustomerBookingScreen(initialBranchId: 'branch-01'),
+          child: MaterialApp(
+            routes: {AppRoutes.customerHome: (_) => const CustomerMain()},
+            home: const CustomerBookingScreen(initialBranchId: 'branch-01'),
           ),
         ),
       ),
     );
     final dropdowns = find.byType(DropdownButtonFormField<String>);
+    await tester.ensureVisible(dropdowns.at(1));
+    await tester.pumpAndSettle();
     await tester.tap(dropdowns.at(1));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Combo Cắt + Gội · 45 phút').last);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(dropdowns.last);
+    await tester.pumpAndSettle();
     await tester.tap(dropdowns.last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Nguyễn Minh Hùng').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(ChoiceChip).first);
     await tester.pumpAndSettle();
     await tester.tap(find.byType(ChoiceChip).first);
     await tester.pumpAndSettle();
@@ -214,11 +223,16 @@ void main() {
     expect(booking.appointments, hasLength(1));
     expect(booking.appointments.single.customerId, 'customer-01');
     expect(find.text('Đặt lịch thành công!'), findsOneWidget);
+    expect(find.byType(CustomerBookingScreen), findsNothing);
+    expect(find.byType(CustomerMain), findsOneWidget);
     expect(
-      tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Xác nhận'))
-          .onPressed,
-      isNull,
+      tester.state<NavigatorState>(find.byType(Navigator)).canPop(),
+      isFalse,
     );
+    await tester.ensureVisible(find.text('Hủy lịch'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hủy lịch'));
+    await tester.pumpAndSettle();
+    expect(booking.appointments.single.status, AppointmentStatus.cancelled);
   });
 }

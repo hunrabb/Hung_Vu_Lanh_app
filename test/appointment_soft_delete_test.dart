@@ -80,6 +80,8 @@ void main() {
       expect(find.byTooltip('Xóa lịch sử'), findsNothing);
       provider.cancel('home-test');
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byTooltip('Xóa lịch sử'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Xóa lịch sử'));
       await tester.pumpAndSettle();
       expect(
@@ -89,6 +91,8 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Hủy'));
       await tester.pumpAndSettle();
       expect(provider.appointments.single.isHiddenByCustomer, isFalse);
+      await tester.ensureVisible(find.byTooltip('Xóa lịch sử'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Xóa lịch sử'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Đồng ý'));

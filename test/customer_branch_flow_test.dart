@@ -209,9 +209,7 @@ void main() {
         ),
         throwsA(isA<UnauthorizedException>()),
       );
-      Navigator.of(tester.element(find.byType(CustomerBookingScreen)))
-          .pushNamedAndRemoveUntil(AppRoutes.customerHome, (_) => false);
-      await tester.pumpAndSettle();
+      expect(find.byType(CustomerBookingScreen), findsNothing);
       await tester.tap(
         find.descendant(
           of: find.byType(BottomNavigationBar),

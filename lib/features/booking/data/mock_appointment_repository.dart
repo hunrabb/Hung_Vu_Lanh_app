@@ -114,4 +114,15 @@ class MockAppointmentRepository {
     _items[index] = item.copyWith(isHiddenByStaff: true);
     return true;
   }
+
+  void reviewStaff(String id, int rating) {
+    final index = _items.indexWhere((a) => a.id == id);
+    if (index < 0 ||
+        _items[index].status != AppointmentStatus.completed ||
+        rating < 1 ||
+        rating > 5) {
+      throw StateError('Chỉ đánh giá lịch đã hoàn thành với 1–5 sao.');
+    }
+    _items[index] = _items[index].copyWith(isReviewed: true, rating: rating);
+  }
 }

@@ -174,9 +174,13 @@ void main() {
         'Khách vãng lai / 0901234567',
       );
       final dropdowns = find.byType(DropdownButtonFormField<String>);
+      await tester.ensureVisible(dropdowns.at(1));
+      await tester.pumpAndSettle();
       await tester.tap(dropdowns.at(1));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Combo Cắt + Gội · 45 phút').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(dropdowns.last);
       await tester.pumpAndSettle();
       await tester.tap(dropdowns.last);
       await tester.pumpAndSettle();

@@ -416,6 +416,16 @@ class AppointmentProvider extends ChangeNotifier {
     if (_repository.cancel(id)) notifyListeners();
   }
 
+  void reviewStaff(String id, int rating) {
+    final user = _access.requireUser();
+    final item = _repository.getAll().where((a) => a.id == id).firstOrNull;
+    if (user.role != UserRole.customer || item?.customerId != user.id) {
+      throw UnauthorizedException();
+    }
+    _repository.reviewStaff(id, rating);
+    notifyListeners();
+  }
+
   void hideAppointmentFromCustomer(String appointmentId) {
     _checkWrite(appointmentId, 'customerHide');
     if (_repository.hideAppointmentFromCustomer(appointmentId)) {

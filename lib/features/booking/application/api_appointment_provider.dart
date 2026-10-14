@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../auth/application/auth_controller.dart';
 import '../data/api_booking_repository.dart';
+import 'appointment_permissions.dart';
 
 class ApiAppointmentProvider extends ChangeNotifier {
   ApiAppointmentProvider(this.repo, this.auth) {
@@ -18,6 +19,17 @@ class ApiAppointmentProvider extends ChangeNotifier {
   int page = 1, _epoch = 0, _request = 0;
   bool loading = false, more = false, _disposed = false;
   final Set<String> busy = {};
+  final Map<String, ApiAppointment> _created = {};
+  void acceptBooking(ApiAppointment item) {
+    if (_disposed || auth.currentUser == null) return;
+    _created[item.id] = item;
+    upcoming = [item, ...upcoming.where((a) => a.id != item.id)];
+    if (status == null || item.status == status) {
+      rows = [item, ...rows.where((a) => a.id != item.id)];
+    }
+    recordMutation();
+  }
+
   int mutationVersion = 0;
   void recordMutation() {
     mutationVersion++;
@@ -37,6 +49,7 @@ class ApiAppointmentProvider extends ChangeNotifier {
     services = [];
     staffNames = {};
     busy.clear();
+    _created.clear();
     _catalog = null;
     error = null;
     loading = false;
@@ -108,9 +121,18 @@ class ApiAppointmentProvider extends ChangeNotifier {
         }
       }
       if (_disposed || epoch != _epoch || request != _request) return;
-      upcoming = [...pending, ...confirmed];
+      final received = [...data, ...pending, ...confirmed];
+      for (final item in received) {
+        _created.remove(item.id);
+      }
+      upcoming = [...pending, ...confirmed, ..._created.values];
       staffNames.addAll(names);
       rows = next ? [...rows, ...data] : data;
+      rows = [
+        ..._created.values.where((a) => status == null || a.status == status),
+        ...rows,
+      ];
+      rows = {for (final item in rows) item.id: item}.values.toList();
       page = target;
       more = data.length == 50;
     } catch (e) {
@@ -126,12 +148,32 @@ class ApiAppointmentProvider extends ChangeNotifier {
   }
 
   Future<void> act(String id, String action) async {
+    final item = [
+      ...rows,
+      ...upcoming,
+    ].where((row) => row.id == id).firstOrNull;
+    if (item == null || !canActOnAppointment(auth.currentUser, item, action)) {
+      throw StateError(
+        'Bạn không có quyền thực hiện thao tác với lịch hẹn này.',
+      );
+    }
     if (!busy.add(id)) return;
     final epoch = _epoch;
     notifyListeners();
     try {
       await repo.act(id, action);
       if (_disposed || epoch != _epoch) return;
+      _created.remove(id);
+      final updated = ApiAppointment({
+        ...item.data,
+        if (action == 'cancel') 'status': 'cancelled',
+        if (action == 'complete') 'status': 'completed',
+        if (action == 'no-show') 'status': 'noShow',
+      });
+      rows = action.startsWith('hide/')
+          ? rows.where((a) => a.id != id).toList()
+          : rows.map((a) => a.id == id ? updated : a).toList();
+      upcoming = upcoming.where((a) => a.id != id).toList();
       recordMutation();
       if (!_disposed && epoch == _epoch) await refresh();
     } finally {

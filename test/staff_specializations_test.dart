@@ -109,6 +109,8 @@ void main() {
           tester.widget<DropdownButtonFormField<String>>(fields.last).onChanged,
           isNull,
         );
+        await tester.ensureVisible(fields.at(1));
+        await tester.pumpAndSettle();
         await tester.tap(fields.at(1));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Combo Cắt + Gội · 45 phút').last);
@@ -122,16 +124,22 @@ void main() {
               .map((item) => item.value),
           ['staff-01', 'staff-03'],
         );
+        await tester.ensureVisible(fields.last);
+        await tester.pumpAndSettle();
         await tester.tap(fields.last);
         await tester.pumpAndSettle();
         await tester.tap(find.text('Nguyễn Minh Hùng').last);
         await tester.pumpAndSettle();
         if (!walkIn) {
+          await tester.ensureVisible(fields.first);
+          await tester.pumpAndSettle();
           await tester.tap(fields.first);
           await tester.pumpAndSettle();
           await tester.tap(find.text('Cơ sở Đống Đa').last);
           await tester.pumpAndSettle();
         }
+        await tester.ensureVisible(fields.at(1));
+        await tester.pumpAndSettle();
         await tester.tap(fields.at(1));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Nhuộm màu thời trang · 120 phút').last);

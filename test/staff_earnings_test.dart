@@ -285,6 +285,8 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);
+    await tester.ensureVisible(find.text('Xin nghỉ phép'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Xin nghỉ phép'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('OK'));

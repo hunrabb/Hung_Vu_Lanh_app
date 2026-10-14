@@ -1,4 +1,6 @@
 import '../../../shared/widgets/salon_brand.dart';
+import '../../../shared/widgets/profile_identity_card.dart';
+import '../../../core/theme/app_theme.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -99,90 +101,171 @@ class _ProfileTab extends StatelessWidget {
     final user = context.watch<AuthController>().currentUser;
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Hồ sơ của bạn',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-                color: Color(0xFF30251F),
-              ),
-            ),
-            const SizedBox(height: 36),
-            const Center(
-              child: CircleAvatar(
-                radius: 40,
-                backgroundColor: Colors.white,
-                child: Icon(
-                  Icons.person_outline,
-                  size: 38,
-                  color: Color(0xFF30251F),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Hồ sơ của bạn',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                    color: Color(0xFF30251F),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              user?.name ?? '',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 23,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              user?.email ?? '',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.star_outline, color: Color(0xFFC5A16B)),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Điểm thưởng (mẫu)',
-                      style: TextStyle(fontSize: 13),
+                const SizedBox(height: 8),
+                const Text(
+                  'Góc riêng của bạn tại Barbershop & Spa.',
+                  style: TextStyle(color: Color(0xFF817368), height: 1.5),
+                ),
+                const SizedBox(height: 24),
+                ProfileIdentityCard(
+                  name: user?.name ?? '',
+                  subtitle: user?.email ?? '',
+                  badge: 'KHÁCH HÀNG',
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Thông tin cá nhân',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppTheme.outline),
+                  ),
+                  child: Column(
+                    children: [
+                      _ProfileDetail(
+                        icon: Icons.phone_outlined,
+                        label: 'Số điện thoại',
+                        value: user?.phone,
+                      ),
+                      const Divider(height: 1, indent: 62, endIndent: 18),
+                      _ProfileDetail(
+                        icon: Icons.location_on_outlined,
+                        label: 'Địa chỉ',
+                        value: user?.address,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0E6D7),
+                    border: Border.all(color: const Color(0xFFE4D3BB)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.stars_outlined,
+                        color: Color(0xFF8D7353),
+                        size: 30,
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Điểm thưởng (mẫu)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Thông tin minh họa',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF817368),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '150',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF30251F),
+                    side: const BorderSide(color: Color(0xFFE0E0E0)),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  Text('150', style: TextStyle(fontWeight: FontWeight.w700)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF30251F),
-                side: const BorderSide(color: Color(0xFFE0E0E0)),
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  onPressed: () {
+                    // Xóa phiên và lịch sử điều hướng, Back không mở lại trang nội bộ.
+                    context.read<AuthController>().signOut();
+                    Navigator.of(context)
+                        .pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
+                  },
+                  icon: const Icon(Icons.logout, size: 19),
+                  label: const Text('Đăng xuất'),
                 ),
-              ),
-              onPressed: () {
-                // Xóa phiên và lịch sử điều hướng, Back không mở lại trang nội bộ.
-                context.read<AuthController>().signOut();
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
-              },
-              icon: const Icon(Icons.logout, size: 19),
-              label: const Text('Đăng xuất'),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _ProfileDetail extends StatelessWidget {
+  const _ProfileDetail({required this.icon, required this.label, this.value});
+  final IconData icon;
+  final String label;
+  final String? value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(18),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 22, color: AppTheme.primary),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(color: Color(0xFF817368), fontSize: 11),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                value == null || value!.trim().isEmpty
+                    ? 'Chưa cập nhật'
+                    : value!,
+                style: const TextStyle(fontSize: 14, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }

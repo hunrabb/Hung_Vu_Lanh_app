@@ -1,5 +1,6 @@
 import 'core/security/access_scope.dart';
 import 'core/theme/app_theme.dart';
+import 'features/reviews/data/review_repository.dart';
 import 'features/branches/data/mock_branch_repository.dart';
 import 'features/branches/application/branch_provider.dart';
 
@@ -162,7 +163,14 @@ class BarbershopApp extends StatelessWidget {
         ),
       ),
     ],
-    child: const _AppNavigator(),
+    child: Provider(
+      create: (c) => ReviewRepository(
+        c.read<AuthController>(),
+        c.read<MockAppointmentRepository>(),
+        onStaffReview: c.read<AppointmentProvider>().reviewStaff,
+      ),
+      child: const _AppNavigator(),
+    ),
   );
 }
 

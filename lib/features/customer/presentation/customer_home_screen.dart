@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../auth/application/auth_controller.dart';
 import '../../../core/routing/app_routes.dart';
+import '../../../core/routing/booking_arguments.dart';
 import '../../../core/models/appointment.dart';
 import '../../../core/models/promotion.dart';
 import '../../booking/application/appointment_provider.dart';
@@ -17,6 +18,8 @@ import '../../settings/application/shop_settings_provider.dart';
 import '../../users/presentation/user_names.dart';
 import '../../branches/application/branch_provider.dart';
 import '../../../core/models/branch.dart';
+import '../../../core/models/app_user.dart';
+import '../../reviews/presentation/reviews_screen.dart';
 import '../../booking/application/api_appointment_provider.dart';
 
 // Home reads booking data; marketing stays separate from booking prices.
@@ -70,17 +73,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     (name: 'Nhuộm', icon: Icons.palette_outlined),
     (name: 'Massage', icon: Icons.spa_outlined),
   ];
-  static const _barbers = [
-    (name: 'Alex', initials: 'AL', rating: '4.8', specialty: 'Fade & styling'),
-    (name: 'Minh', initials: 'MI', rating: '4.9', specialty: 'Layer & uốn'),
-    (name: 'Daniel', initials: 'DA', rating: '4.8', specialty: 'Classic cuts'),
-    (
-      name: 'Linh',
-      initials: 'LI',
-      rating: '4.9',
-      specialty: 'Color specialist',
-    ),
-  ];
   static const _styles = [
     (
       name: 'Mohican chéo',
@@ -126,6 +118,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           .pushNamed(AppRoutes.booking, arguments: _validBranchId);
     }
   }
+
+  void _services([String? category]) => Navigator.pushNamed(
+    context,
+    AppRoutes.services,
+    arguments: ServiceArguments(branchId: _validBranchId, categoryId: category),
+  );
 
   String _hour(int minute) =>
       '${(minute ~/ 60).toString().padLeft(2, '0')}:${(minute % 60).toString().padLeft(2, '0')}';
@@ -217,10 +215,29 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   const SizedBox(height: 18),
                 ],
                 _header(name),
+                if (remote) const ApiUpcomingHome(),
+                if (!remote && appointment != null)
+                  _appointment(appointment, staffName),
                 const SizedBox(height: 22),
                 const SalonBrandBanner(compact: true),
                 const SizedBox(height: 10),
                 const SizedBox(height: 12),
+                if (branchId != null)
+                  TextButton.icon(
+                    onPressed: () => Navigator.pushNamed(
+                      context,
+                      AppRoutes.reviews,
+                      arguments: ReviewsArguments(
+                        branchId: branchId,
+                        staffId: '',
+                        branchName: branches
+                            .firstWhere((b) => b.id == branchId)
+                            .name,
+                      ),
+                    ),
+                    icon: const Icon(Icons.star_outline),
+                    label: const Text('Xem đánh giá cơ sở'),
+                  ),
                 DropdownButtonFormField<String>(
                   key: ValueKey('home-branch-$branchId'),
                   initialValue: branchId,
@@ -262,13 +279,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   onPressed: closedToday ? null : _openBooking,
                 ),
                 const SizedBox(height: 28),
-                if (context.watch<AuthController>().isRemote)
-                  const ApiUpcomingHome(),
-                if (!context.watch<AuthController>().isRemote &&
-                    appointment != null) ...[
-                  _appointment(appointment, staffName),
-                  const SizedBox(height: 32),
-                ],
                 if (promotions.isNotEmpty) ...[
                   _section('Dành riêng cho bạn', 'Ưu đãi thành viên'),
                   const SizedBox(height: 18),
@@ -279,8 +289,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   'Dịch vụ',
                   'Chăm sóc theo cách của bạn',
                   action: 'Xem tất cả',
-                  onTap: () =>
-                      _preview('Danh sách dịch vụ đang được xây dựng.'),
+                  onTap: () => _services(),
                 ),
                 const SizedBox(height: 18),
                 _categoryList(),
@@ -289,7 +298,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   'Thợ nổi bật',
                   'Những đôi tay bạn có thể tin tưởng',
                   action: 'Khám phá',
-                  onTap: () => _preview('Danh sách thợ hiện là dữ liệu mẫu.'),
+                  onTap: () => _services(),
                 ),
                 const SizedBox(height: 18),
                 _barberList(),
@@ -393,10 +402,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _search() => TextField(
     textInputAction: TextInputAction.search,
-    onSubmitted: (_) =>
-        _preview('Tìm kiếm sẽ được kết nối với danh sách dịch vụ ở bước sau.'),
+    readOnly: true,
+    onTap: () => _services(),
     decoration: InputDecoration(
-      hintText: 'Tìm kiếm dịch vụ, thợ cắt...',
+      hintText: 'Tìm kiếm dịch vụ...',
       hintStyle: const TextStyle(fontSize: 13, color: _muted),
       prefixIcon: const Icon(Icons.search_rounded, color: _muted),
       filled: true,
@@ -641,7 +650,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   borderRadius: BorderRadius.circular(20),
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
-                    onTap: () => _preview(category.name),
+                    onTap: () => _services(
+                      ['haircut', 'hairWash', 'perm', 'dye', 'massage'][index],
+                    ),
                     child: Icon(category.icon, size: 25, color: _ink),
                   ),
                 ),
@@ -663,35 +674,78 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     ),
   );
 
-  Widget _barberList() => SizedBox(
-    height: 224,
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      itemCount: _barbers.length,
-      separatorBuilder: (_, _) => const SizedBox(width: 16),
-      itemBuilder: (context, index) {
-        final barber = _barbers[index];
-        return SizedBox(
-          width: 164,
-          child: _portraitCard(
-            title: barber.name,
-            subtitle: barber.specialty,
-            rating: barber.rating,
-            placeholder: Text(
-              barber.initials,
-              style: const TextStyle(
-                fontSize: 38,
-                letterSpacing: -1,
-                fontWeight: FontWeight.w300,
-                color: Color(0xFF695442),
+  Widget _barberList() {
+    final remote = context.read<AuthController>().isRemote;
+    final p = remote ? context.watch<ApiAppointmentProvider>() : null;
+    final people = remote
+        ? p!.upcoming
+              .where(
+                (a) => _validBranchId == null || a.branchId == _validBranchId,
+              )
+              .map(
+                (a) => (
+                  id: a.staffId,
+                  name: p.staffNames[a.staffId] ?? 'Thợ cắt',
+                  branch: a.branchId,
+                ),
+              )
+              .toSet()
+              .toList()
+        : context
+              .watch<UserProvider>()
+              .users
+              .where(
+                (u) =>
+                    u.role == UserRole.staff &&
+                    u.isApproved &&
+                    (_validBranchId == null || u.branchId == _validBranchId),
+              )
+              .map((u) => (id: u.id, name: u.name, branch: u.branchId!))
+              .toList();
+    if (people.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('Chọn cơ sở và dịch vụ để xem chuyên viên phù hợp.'),
+      );
+    }
+    return SizedBox(
+      height: 224,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: people.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 16),
+        itemBuilder: (context, index) {
+          final barber = people[index];
+          return SizedBox(
+            width: 164,
+            child: _portraitCard(
+              title: barber.name,
+              subtitle: 'Xem đánh giá',
+              placeholder: Text(
+                barber.name.characters.first,
+                style: const TextStyle(
+                  fontSize: 38,
+                  letterSpacing: -1,
+                  fontWeight: FontWeight.w300,
+                  color: Color(0xFF695442),
+                ),
+              ),
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRoutes.reviews,
+                arguments: ReviewsArguments(
+                  branchId: barber.branch,
+                  staffId: barber.id,
+                  staffName: barber.name,
+                  initialTarget: 'staff',
+                ),
               ),
             ),
-            onTap: () => _preview('${barber.name} - ${barber.specialty}'),
-          ),
-        );
-      },
-    ),
-  );
+          );
+        },
+      ),
+    );
+  }
 
   Widget _inspiration() => SizedBox(
     height: 268,
@@ -708,7 +762,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             subtitle: style.detail,
             imageAsset: style.image,
             placeholder: const Icon(Icons.content_cut, size: 48),
-            onTap: () => _preview(style.name),
+            onTap: () => _services('haircut'),
           ),
         );
       },

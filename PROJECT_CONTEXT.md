@@ -1,5 +1,68 @@
 # PROJECT CONTEXT — Hệ thống Quản lý Chuỗi Cửa Hàng
 
+### Customer services, visible bookings, calendar and reviews — 12/10/2026
+
+See CUSTOMER_FEATURES.md for implemented behavior, routes, API and migration.
+Home upcoming card moved directly below greeting. ApiAppointmentProvider retains
+successful booking responses until acknowledged by the list API, deduplicates
+rows and updates cancellation locally before refresh. Month calendars emphasize
+the Hanoi current day and disable past dates. Customer services now have actual
+catalog price/duration, illustrative process/photos and booking preselection via
+typed named-route arguments (old string branch arguments still supported).
+ReviewRepository supports RAM mock and persisted API reviews. Completed own
+appointments link to independent branch/staff ratings; owner/completed/duplicate
+guards run server-side. Staff reviews feed existing rating/report fields. Seeded
+branches each have a separate Manager; SQL migration006 adds a unique partial
+manager index and reviews with integrity trigger. Migration applied and local
+backend restarted; public reviews endpoint verified. No dependencies added.
+
+### Booking success returns Home — 12/10/2026
+
+Successful customer bookings (API and mock) navigate to AppRoutes.customerHome
+and clear the prior stack, so Home opens on its first tab and Back cannot reopen
+the submitted form. API refreshes appointments before navigation; its completion
+checks token revision and current user after async operations, including refresh.
+The existing Home appointment card supports cancellation and refreshes upcoming/
+history state. Manager walk-in still pops to the manager screen. Slot conflicts
+remain on the form and reload availability. Tests cover API and mock booking,
+automatic return, cleared history and cancelling the new appointment from Home.
+Validation: flutter analyze --no-pub clean; 125 Flutter tests passed,
+1 opt-in live integration test skipped.
+
+### Booking banner and appointment role actions — 12/10/2026
+
+BookingLayout now includes offline salon photography with a CTA scrolling to
+the selection form. Customer appointment lists (API and mock) always offer a
+banner CTA opening the existing booking route, even with existing appointments.
+Customer no-show history/filter reads “Không đến”; staff/manager retain the
+operational “Khách không đến” wording. Historical statuses are not removed.
+Appointment API cards and provider mutations share appointment_permissions.dart,
+mirroring backend role/ownership/branch/status rules: Customer cancel/hide own;
+approved Staff complete/no-show/hide assigned in-branch; Manager cancel/complete/
+no-show within branch; Boss cancel across chain. Invalid local mutations fail
+before sending HTTP. Server guards remain authoritative and unchanged.
+Role matrix and four-role UI tests cover forbidden customer mutations; previews
+at artifacts/ui/booking-banner-{320,390,1280}.png verify responsive form/CTA.
+Validation: flutter analyze --no-pub clean; full Flutter suite 124 passed,
+1 opt-in live integration test skipped; responsive preview test passed.
+
+### Profile and booking presentation — 12/10/2026
+
+Customer and Staff profiles share an espresso identity card with a Unicode
+initial avatar. Customer contact fields display session phone/address or an
+empty value label; reward points remain explicitly illustrative. Staff keeps
+the existing statistics, password, leave and logout actions.
+API and mock bookings share BookingLayout/BookingSection: three numbered
+selection groups, ivory cards and a persistent total/confirmation footer with
+the selected appointment time. Content is constrained on wide screens; money
+uses integer-string formatting. Providers, API contracts, permissions and
+availability rules are unchanged. Existing UI tests scroll controls into view
+for the taller layout. Preview PNGs at artifacts/ui/profile-*.png and booking-*.png
+were rendered at 320, 390 and 1280 pixels.
+Validation: flutter analyze --no-pub clean; 28 focused profile/booking/auth
+tests and all 4 shop-settings tests pass. Full regression additionally passed
+the other suites; the live integration test remains opt-in and was skipped.
+
 ### UI salon, banners and hairstyle assets — 12/10/2026
 
 Shared ivory/espresso/champagne theme and neutral presentation palette cover
