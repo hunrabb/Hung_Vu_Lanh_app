@@ -179,15 +179,22 @@ class AppointmentApiCard extends StatelessWidget {
               item.serviceNames,
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
             ),
-            Text(
-              'Tổng tiền: ${item.status == 'noShow' ? '0' : item.price.replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}đ',
-            ),
             Text('Cơ sở: ${p.branchName(item.branchId)}'),
             Text(
-              'Thợ: ${item.staffId == user?.id ? user?.name : p.staffNames[item.staffId] ?? item.staffId}',
+              'Thợ: ${item.staffId == user?.id ? user?.name : item.data['staffName'] ?? p.staffNames[item.staffId] ?? item.staffId}',
             ),
             if (role != UserRole.customer) Text('Khách: ${item.customerName}'),
             Text('${stamp(item.startAt)} → ${stamp(item.endAt)}'),
+            const Divider(height: 24),
+            Text(
+              'Tổng tiền: ${item.status == 'noShow' ? '0' : item.price.replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}đ',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF594536),
+              ),
+            ),
+
             Chip(
               avatar: Icon(
                 active(item) ? Icons.schedule : Icons.event_note_outlined,

@@ -1,17 +1,18 @@
+import '../../../core/data/memory_store.dart';
 import '../../../core/mock/chain_seed.dart';
 import '../../../core/models/branch.dart';
 
 class MockBranchRepository {
   MockBranchRepository({Iterable<Branch>? initialData})
-    : _items = List.of(initialData ?? ChainSeed.branches);
-  final List<Branch> _items;
-  List<Branch> getAll() => List.unmodifiable(_items);
-  Branch? getById(String id) {
-    for (final item in _items) {
-      if (item.id == id) return item;
-    }
-    return null;
-  }
+    : _store = MemoryStore<Branch, String>(
+        idOf: (item) => item.id,
+        initialData: initialData ?? ChainSeed.branches,
+        duplicateMessage: 'Branch ID already exists.',
+        missingMessage: 'Branch not found.',
+      );
+  final MemoryStore<Branch, String> _store;
+  List<Branch> getAll() => _store.getAll();
+  Branch? getById(String id) => _store.getById(id);
 
   void _validate(Branch item) {
     if ([
@@ -26,20 +27,13 @@ class MockBranchRepository {
 
   void add(Branch item) {
     _validate(item);
-    if (getById(item.id) != null) throw StateError('Branch ID already exists.');
-    _items.add(item);
+    _store.add(item);
   }
 
   void update(Branch item) {
     _validate(item);
-    final index = _items.indexWhere((b) => b.id == item.id);
-    if (index < 0) throw StateError('Branch not found.');
-    _items[index] = item;
+    _store.update(item);
   }
 
-  void delete(String id) {
-    final index = _items.indexWhere((b) => b.id == id);
-    if (index < 0) throw StateError('Branch not found.');
-    _items.removeAt(index);
-  }
+  void delete(String id) => _store.delete(id);
 }

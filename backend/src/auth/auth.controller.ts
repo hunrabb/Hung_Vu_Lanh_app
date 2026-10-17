@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { AuthService } from "./auth.service";
-import { RegisterDto, LoginDto, PasswordDto } from "./auth.dto";
+import { RegisterDto, LoginDto, PasswordDto, ProfileDto } from "./auth.dto";
 import { Actor, CurrentUser, Public } from "./auth.decorators";
 import { LoginRateGuard } from "./login-rate.guard";
 @Controller("auth")
@@ -26,6 +26,9 @@ export class AuthController {
   }
   @Get("me") me(@CurrentUser() actor: Actor) {
     return this.auth.profile(actor);
+  }
+  @Patch("me") updateProfile(@CurrentUser() actor: Actor, @Body() dto: ProfileDto) {
+    return this.auth.updateProfile(actor, dto);
   }
   @Patch("password") password(
     @CurrentUser() actor: Actor,

@@ -314,7 +314,30 @@ class _ApiReportScreenState extends State<ApiReportScreen> {
         _metric('Doanh thu tháng này', ApiMoney.formatVnd(m['revenueVnd'])),
         if (widget.kind == ReportKind.bossDashboard)
           _metric('Lịch tháng này', '${m['appointmentCount']}'),
-        _metric('Ca completed tháng này', '${m['completedCount']}'),
+        _metric('Ca hoàn thành tháng này', '${m['completedCount']}'),
+        if (m['customerCount'] != null)
+          _metric('Khách tháng này', '${m['customerCount']}'),
+        if (m['walkInCount'] != null)
+          _metric('Lượt khách vãng lai tháng này', '${m['walkInCount']}'),
+        if (d['previousMonth'] != null) ...[
+          const SizedBox(height: 16),
+          const Text(
+            'Tháng trước',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          _metric(
+            'Doanh thu tháng trước',
+            ApiMoney.formatVnd(d['previousMonth']['revenueVnd']),
+          ),
+          _metric(
+            'Khách tháng trước',
+            '${d['previousMonth']['customerCount']}',
+          ),
+          _metric(
+            'Lượt khách vãng lai tháng trước',
+            '${d['previousMonth']['walkInCount']}',
+          ),
+        ],
       ]);
     }
     if (d['revenueVnd'] != null) {

@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import { User } from "../users/user.entity";
 import { Credential } from "./credential.entity";
 import { Actor } from "./auth.decorators";
-import { LoginDto, RegisterDto, PasswordDto } from "./auth.dto";
+import { LoginDto, RegisterDto, PasswordDto, ProfileDto } from "./auth.dto";
 import { hashPassword, validateNewPassword, verifyPassword } from "./passwords";
 
 export interface Claims {
@@ -33,9 +33,28 @@ export class AuthService {
       role: user.role,
       branchId: user.branchId,
       phone: user.phone,
+      address: user.address,
       isApproved: user.isApproved,
       createdAt: user.createdAt,
     };
+  }
+  async updateProfile(actor: Actor, dto: ProfileDto) {
+    if (!dto.name.trim()) throw new BadRequestException("Name is required");
+    try {
+      return await this.db.transaction(async (manager) => {
+        const user = await this.lockUser(manager, actor.id);
+        const credential = await this.lockCredential(manager, actor.id);
+        this.assertActor(actor, user, credential);
+        const changes = { name: dto.name.trim(), email: dto.email.trim().toLowerCase(),
+          phone: dto.phone.trim(), address: dto.address.trim() };
+        await manager.update(User, { id: actor.id }, changes);
+        return this.profile({ ...user, ...changes });
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === "23505")
+        throw new ConflictException("Email đã được sử dụng.");
+      throw error;
+    }
   }
   async register(dto: RegisterDto) {
     validateNewPassword(dto.password);

@@ -35,7 +35,7 @@ export class ReportsService {
   }
   private async metrics(m: EntityManager, period: Period, scope: Scope) {
     const [row] = await m.query(
-      `SELECT COALESCE(SUM(a.total_price_vnd) FILTER(WHERE a.status='completed'),0)::text AS "revenueVnd",COUNT(*)::int AS "appointmentCount",COUNT(*) FILTER(WHERE a.status='completed')::int AS "completedCount",COUNT(*) FILTER(WHERE a.status='cancelled')::int AS "cancelledCount" ${BASE}`,
+      `SELECT COALESCE(SUM(a.total_price_vnd) FILTER(WHERE a.status='completed'),0)::text AS "revenueVnd",COUNT(*)::int AS "appointmentCount",COUNT(*) FILTER(WHERE a.status='completed')::int AS "completedCount",COUNT(*) FILTER(WHERE a.status='cancelled')::int AS "cancelledCount",COUNT(DISTINCT a.customer_id) FILTER(WHERE a.status='completed')::int AS "customerCount",COUNT(*) FILTER(WHERE a.status='completed' AND a.customer_id IS NULL)::int AS "walkInCount" ${BASE}`,
       this.args(period, scope),
     );
     return row;
@@ -85,6 +85,7 @@ export class ReportsService {
       periods,
       today: await this.metrics(m, periods.day, scope),
       month: await this.metrics(m, periods.month, scope),
+      previousMonth: await this.metrics(m, periods.previousMonth, scope),
       upcoming: await this.ledger(
         m,
         periods.day,
@@ -151,6 +152,7 @@ export class ReportsService {
       periods,
       today: await this.metrics(m, periods.day, scope),
       month: await this.metrics(m, periods.month, scope),
+      previousMonth: await this.metrics(m, periods.previousMonth, scope),
       period,
       transactions: await this.ledger(m, period, scope, q, "completed"),
       page: q.page,

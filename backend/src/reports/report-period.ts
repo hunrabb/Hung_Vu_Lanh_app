@@ -9,6 +9,10 @@ export function reportPeriods(now = Date.now()) {
   next.setUTCMonth(next.getUTCMonth() + 1);
   return {
     day: { from: new Date(day.start), to: new Date(day.end) },
+    previousMonth: {
+      from: new Date(hanoiDay(new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() - 2, 1)).toISOString().slice(0, 10)).start),
+      to: new Date(hanoiDay(month).start),
+    },
     month: {
       from: new Date(hanoiDay(month).start),
       to: new Date(hanoiDay(next.toISOString().slice(0, 10)).start),

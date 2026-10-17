@@ -239,6 +239,10 @@ void main() {
           await auth.signIn(email: email, password: 'Phase6Staff123'),
           true,
         );
+        // The new session loads its own appointment list asynchronously.
+        await appointments.refresh();
+        expect(appointments.error, isNull);
+        expect(appointments.rows.any((row) => row.id == booked.id), true);
         await appointments.act(booked.id, 'complete');
         await appointments.act(walk.id, 'no-show');
         reports = ReportProvider(ReportRepository(api), auth, appointments);

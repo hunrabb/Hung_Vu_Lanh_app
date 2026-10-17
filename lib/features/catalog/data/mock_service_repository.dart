@@ -1,3 +1,4 @@
+import '../../../core/data/memory_store.dart';
 import '../../../core/models/service.dart';
 
 /// In-memory profile/catalog storage. No credentials or authorization here.
@@ -8,32 +9,16 @@ class MockServiceRepository {
     }
   }
 
-  final List<Service> _items = [];
-  List<Service> getAll() => List.unmodifiable(_items);
-  Service? getById(String id) {
-    for (final item in _items) {
-      if (item.id == id) return item;
-    }
-    return null;
-  }
+  final _store = MemoryStore<Service, String>(idOf: (item) => item.id);
+  List<Service> getAll() => _store.getAll();
+  Service? getById(String id) => _store.getById(id);
+  void add(Service item) => _store.add(item, prepare: _prepare);
+  void update(Service item) => _store.update(item, prepare: _prepare);
+  void delete(String id) => _store.delete(id);
 
-  void add(Service item) {
-    if (getById(item.id) != null) throw StateError('ID already exists.');
+  Service _prepare(Service item) {
     _validate(item);
-    _items.add(item.copyWith(name: item.name.trim()));
-  }
-
-  void update(Service item) {
-    final index = _items.indexWhere((other) => other.id == item.id);
-    if (index < 0) throw StateError('ID not found.');
-    _validate(item);
-    _items[index] = item.copyWith(name: item.name.trim());
-  }
-
-  void delete(String id) {
-    final index = _items.indexWhere((item) => item.id == id);
-    if (index < 0) throw StateError('ID not found.');
-    _items.removeAt(index);
+    return item.copyWith(name: item.name.trim());
   }
 
   void _validate(Service item) {

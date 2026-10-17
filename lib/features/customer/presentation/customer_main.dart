@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../auth/application/auth_controller.dart';
 import 'customer_home_screen.dart';
+import 'customer_profile_dialog.dart';
 import 'customer_appointments_screen.dart';
 
 class CustomerMain extends StatefulWidget {
@@ -129,6 +130,17 @@ class _ProfileTab extends StatelessWidget {
                   badge: 'KHÁCH HÀNG',
                 ),
                 const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: user == null
+                      ? null
+                      : () => showDialog<void>(
+                          context: context,
+                          builder: (_) => CustomerProfileDialog(user: user),
+                        ),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Chỉnh sửa hồ sơ'),
+                ),
+                const SizedBox(height: 20),
                 const Text(
                   'Thông tin cá nhân',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),

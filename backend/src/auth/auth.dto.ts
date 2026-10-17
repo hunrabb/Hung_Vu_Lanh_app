@@ -11,6 +11,13 @@ export class RegisterDto {
   @Transform(normalizeEmail) @IsEmail() @MaxLength(254) email!: string;
   @IsString() @MinLength(8) @MaxLength(72) password!: string;
 }
+export class ProfileDto {
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
+  @IsString() @MinLength(1) @MaxLength(120) name!: string;
+  @Transform(normalizeEmail) @IsEmail() @MaxLength(254) email!: string;
+  @IsString() @MaxLength(30) phone!: string;
+  @IsString() @MaxLength(500) address!: string;
+}
 export class PasswordDto {
   @IsString() @MinLength(1) @MaxLength(256) oldPassword!: string;
   @IsString() @MinLength(8) @MaxLength(72) newPassword!: string;

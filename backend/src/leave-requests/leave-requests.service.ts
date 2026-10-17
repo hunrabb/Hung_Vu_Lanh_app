@@ -55,7 +55,7 @@ export class LeaveRequestsService {
             .slice(0, 10),
           ...times,
           reason: dto.reason,
-          createdAt: new Date(),
+          // Database default shares the clock used by the decision trigger.
           status: "pending",
           reviewedBy: null,
           reviewedByName: null,

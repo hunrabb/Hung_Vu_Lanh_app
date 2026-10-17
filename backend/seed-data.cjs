@@ -42,6 +42,8 @@ function passwordHash(password) {
     // SQL provides its own transaction when run from psql; use the already
     // opened transaction here so collision checks and inserts stay atomic.
     await client.query(sql.replace(/^BEGIN;\s*$/m,'').replace(/^COMMIT;\s*$/m,''));
+    const visits = fs.readFileSync(path.join(__dirname, '../database/007_seed_appointments.sql'), 'utf8');
+    await client.query(visits.replace(/^BEGIN;\s*$/m,'').replace(/^COMMIT;\s*$/m,''));
     await client.query('COMMIT');
     const counts = await client.query("SELECT (SELECT count(*) FROM branches) AS branches,(SELECT count(*) FROM users) AS users,(SELECT count(*) FROM users WHERE role='staff' AND NOT is_approved) AS pending_staff,(SELECT count(*) FROM categories) AS categories,(SELECT count(*) FROM services) AS services");
     console.log('Seed committed: '+JSON.stringify(counts.rows[0]));

@@ -63,7 +63,12 @@ export class AppointmentsService {
           order: { position: "ASC" },
         })
       : [];
+    const staff = rows.length ? await this.appointments.manager.find(User, {
+      where: { id: In([...new Set(rows.map((r) => r.staffId))]) },
+      select: { id: true, name: true },
+    }) : [];
     return rows.map((row) => ({
+      staffName: staff.find((person) => person.id === row.staffId)?.name ?? row.staffId,
       ...row,
       services: items.filter((item) => item.appointmentId === row.id),
     }));

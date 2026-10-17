@@ -249,6 +249,62 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<bool> updateOwnProfile({
+    required String name,
+    required String email,
+    required String phone,
+    required String address,
+  }) async {
+    final user = currentUser;
+    if (_isDisposed || _isLoading || user == null) return false;
+    final request = ++_requestId;
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      AppUser updated;
+      if (isRemote) {
+        updated = await apiRepository!.client.requestObject(
+          'PATCH',
+          'auth/me',
+          decode: AppUser.fromJson,
+          body: {
+            'name': name.trim(),
+            'email': email.trim().toLowerCase(),
+            'phone': phone.trim(),
+            'address': address.trim(),
+          },
+        );
+      } else {
+        updated = user.copyWith(
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          address: address.trim(),
+        );
+        _repository!.validateProfileUpdate(updated);
+        _repository.updateProfile(updated);
+      }
+      if (_isDisposed || request != _requestId || currentUser?.id != user.id) {
+        return false;
+      }
+      _currentUser = updated;
+      return true;
+    } catch (e) {
+      if (!_isDisposed && request == _requestId) {
+        _errorMessage = e is ApiException
+            ? e.message
+            : 'Không thể lưu hồ sơ. Vui lòng thử lại.';
+      }
+      return false;
+    } finally {
+      if (!_isDisposed && request == _requestId) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
   void signOut() => _clearSession();
   void _clearSession({bool revoke = true}) {
     if (_isDisposed) return;

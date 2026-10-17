@@ -20,6 +20,7 @@ export class UsersController {
   @Roles("manager") @Post("staff") create(
     @Body() dto: CreateStaffDto,
     @CurrentUser() actor: Actor,
+  
   ) {
     return this.users.createStaff(dto, actor);
   }

@@ -4,10 +4,8 @@ import '../../../core/network/api_client.dart';
 class ApiPendingStaffRepository {
   ApiPendingStaffRepository(this.client);
   final ApiClient client;
-  Future<List<AppUser>> fetch() async =>
-      (await client.request('GET', 'users/pending') as List)
-          .map((row) => AppUser.fromJson(Map<String, dynamic>.from(row as Map)))
-          .toList();
+  Future<List<AppUser>> fetch() =>
+      client.requestList('GET', 'users/pending', decode: AppUser.fromJson);
   Future<Map<String, String>> branches() async => {
     for (final row in await client.request(
       'GET',

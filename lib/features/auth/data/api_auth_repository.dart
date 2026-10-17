@@ -28,13 +28,12 @@ class ApiAuthRepository {
   }) async {
     await _logoutBarrier;
     await client.tokens.clear();
-    return ApiAuthSession.fromJson(
-      await client.request(
-        'POST',
-        'auth/login',
-        authenticated: false,
-        body: {'email': email.trim().toLowerCase(), 'password': password},
-      ),
+    return client.requestObject(
+      'POST',
+      'auth/login',
+      decode: ApiAuthSession.fromJson,
+      authenticated: false,
+      body: {'email': email.trim().toLowerCase(), 'password': password},
     );
   }
 
@@ -45,25 +44,22 @@ class ApiAuthRepository {
   }) async {
     await _logoutBarrier;
     await client.tokens.clear();
-    return ApiAuthSession.fromJson(
-      await client.request(
-        'POST',
-        'auth/register',
-        authenticated: false,
-        body: {
-          'name': name.trim(),
-          'email': email.trim().toLowerCase(),
-          'password': password,
-        },
-      ),
+    return client.requestObject(
+      'POST',
+      'auth/register',
+      decode: ApiAuthSession.fromJson,
+      authenticated: false,
+      body: {
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
+        'password': password,
+      },
     );
   }
 
   Future<AppUser?> restore() async {
     if (await client.tokens.read() == null) return null;
-    return AppUser.fromJson(
-      Map<String, dynamic>.from(await client.request('GET', 'auth/me') as Map),
-    );
+    return client.requestObject('GET', 'auth/me', decode: AppUser.fromJson);
   }
 
   Future<int> commit(ApiAuthSession session, bool Function() isCurrent) =>

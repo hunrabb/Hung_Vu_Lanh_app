@@ -91,6 +91,46 @@ class ApiClient {
     }
   }
 
+  /// Decodes a JSON object using the existing transport and session guards.
+  Future<T> requestObject<T>(
+    String method,
+    String path, {
+    required T Function(Map<String, dynamic>) decode,
+    Object? body,
+    bool authenticated = true,
+    String? tokenOverride,
+  }) async {
+    final data = await request(
+      method,
+      path,
+      body: body,
+      authenticated: authenticated,
+      tokenOverride: tokenOverride,
+    );
+    return decode(Map<String, dynamic>.from(data as Map));
+  }
+
+  /// Decodes each JSON row into the repository's concrete model type.
+  Future<List<T>> requestList<T>(
+    String method,
+    String path, {
+    required T Function(Map<String, dynamic>) decode,
+    Object? body,
+    bool authenticated = true,
+    String? tokenOverride,
+  }) async {
+    final data = await request(
+      method,
+      path,
+      body: body,
+      authenticated: authenticated,
+      tokenOverride: tokenOverride,
+    ) as List;
+    return data
+        .map((row) => decode(Map<String, dynamic>.from(row as Map)))
+        .toList();
+  }
+
   void close() {
     onUnauthorized = null;
     _client.close();

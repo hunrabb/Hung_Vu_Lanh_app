@@ -22,10 +22,8 @@ class ApiAppointment {
 class ApiBookingRepository {
   ApiBookingRepository(this.api);
   final ApiClient api;
-  Future<List<Map<String, dynamic>>> directory(String path) async =>
-      (await api.request('GET', path, authenticated: false) as List)
-          .map((e) => Map<String, dynamic>.from(e as Map))
-          .toList();
+  Future<List<Map<String, dynamic>>> directory(String path) =>
+      api.requestList('GET', path, authenticated: false, decode: (row) => row);
   Future<List<Map<String, dynamic>>> staff(
     String branch,
     String service,
@@ -63,28 +61,27 @@ class ApiBookingRepository {
     required String start,
     bool walkIn = false,
     String contact = '',
-  }) async => ApiAppointment(
-    Map<String, dynamic>.from(
-      await api.request(
-        'POST',
-        walkIn ? 'appointments/walk-in' : 'appointments',
-        body: {
-          if (!walkIn) 'branchId': branch,
-          'staffId': staff,
-          'serviceIds': [service],
-          'startAt': start,
-          if (walkIn) 'customerName': contact.trim(),
-        },
-      ) as Map,
-    ),
+  }) => api.requestObject(
+    'POST',
+    walkIn ? 'appointments/walk-in' : 'appointments',
+    decode: ApiAppointment.new,
+    body: {
+      if (!walkIn) 'branchId': branch,
+      'staffId': staff,
+      'serviceIds': [service],
+      'startAt': start,
+      if (walkIn) 'customerName': contact.trim(),
+    },
   );
   Future<List<ApiAppointment>> list(int page, {String? status}) async {
     final query = Uri(
       queryParameters: {'page': '$page', 'limit': '50', 'status': ?status},
     ).query;
-    return (await api.request('GET', 'appointments?$query') as List)
-        .map((e) => ApiAppointment(Map<String, dynamic>.from(e as Map)))
-        .toList();
+    return api.requestList(
+      'GET',
+      'appointments?$query',
+      decode: ApiAppointment.new,
+    );
   }
 
   Future<void> act(String id, String action) async {

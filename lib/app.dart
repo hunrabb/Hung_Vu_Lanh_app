@@ -1,37 +1,34 @@
-import 'core/security/access_scope.dart';
-import 'core/theme/app_theme.dart';
-import 'features/reviews/data/review_repository.dart';
-import 'features/branches/data/mock_branch_repository.dart';
-import 'features/branches/application/branch_provider.dart';
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'core/models/app_user.dart';
 import 'core/network/api_client.dart';
 import 'core/network/token_store.dart';
-import 'features/auth/data/api_auth_repository.dart';
-import 'features/boss/data/api_pending_staff_repository.dart';
-import 'features/boss/application/pending_staff_provider.dart';
-import 'features/workspace/application/workspace_provider.dart';
-import 'features/workspace/data/workspace_repository.dart';
-import 'features/booking/application/api_appointment_provider.dart';
-import 'features/booking/data/api_booking_repository.dart';
-import 'features/reports/data/report_repository.dart';
-import 'features/reports/application/report_provider.dart';
-
-import 'package:provider/provider.dart';
-
 import 'core/routing/app_router.dart';
 import 'core/routing/app_routes.dart';
+import 'core/security/access_scope.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_controller.dart';
+import 'features/auth/data/api_auth_repository.dart';
 import 'features/auth/data/mock_auth_repository.dart';
+import 'features/booking/application/api_appointment_provider.dart';
+import 'features/booking/application/appointment_provider.dart';
+import 'features/booking/data/api_booking_repository.dart';
+import 'features/booking/data/mock_appointment_repository.dart';
+import 'features/boss/application/pending_staff_provider.dart';
+import 'features/boss/data/api_pending_staff_repository.dart';
+import 'features/branches/application/branch_provider.dart';
+import 'features/branches/data/mock_branch_repository.dart';
 import 'features/catalog/application/service_provider.dart';
 import 'features/catalog/data/mock_service_repository.dart';
+import 'features/reports/application/report_provider.dart';
+import 'features/reports/data/report_repository.dart';
+import 'features/reviews/data/review_repository.dart';
+import 'features/settings/application/shop_settings_provider.dart';
 import 'features/users/application/user_provider.dart';
 import 'features/users/data/mock_user_repository.dart';
-import 'features/settings/application/shop_settings_provider.dart';
-import 'features/booking/application/appointment_provider.dart';
-import 'features/booking/data/mock_appointment_repository.dart';
+import 'features/workspace/application/workspace_provider.dart';
+import 'features/workspace/data/workspace_repository.dart';
 
 class BarbershopApp extends StatelessWidget {
   const BarbershopApp({super.key, this.useMock = false, this.networkClient});

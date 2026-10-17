@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/data/memory_store.dart';
+
 import '../../../core/models/app_user.dart';
 
 /// In-memory profile/catalog storage. No credentials or authorization here.
@@ -10,43 +12,31 @@ class MockUserRepository extends ChangeNotifier {
     }
   }
 
-  final List<AppUser> _items = [];
-  List<AppUser> getAll() => List.unmodifiable(_items);
-  AppUser? getById(String id) {
-    for (final item in _items) {
-      if (item.id == id) return item;
-    }
-    return null;
-  }
+  final _store = MemoryStore<AppUser, String>(idOf: (item) => item.id);
+  List<AppUser> getAll() => _store.getAll();
+  AppUser? getById(String id) => _store.getById(id);
 
   void add(AppUser item) {
-    if (getById(item.id) != null) throw StateError('ID already exists.');
-    _validate(item);
-    _items.add(
-      item.copyWith(
-        name: item.name.trim(),
-        email: item.email.trim().toLowerCase(),
-      ),
-    );
+    _store.add(item, prepare: _prepare);
     notifyListeners();
   }
 
   void update(AppUser item) {
-    final index = _items.indexWhere((other) => other.id == item.id);
-    if (index < 0) throw StateError('ID not found.');
-    _validate(item);
-    _items[index] = item.copyWith(
-      name: item.name.trim(),
-      email: item.email.trim().toLowerCase(),
-    );
+    _store.update(item, prepare: _prepare);
     notifyListeners();
   }
 
   void delete(String id) {
-    final index = _items.indexWhere((item) => item.id == id);
-    if (index < 0) throw StateError('ID not found.');
-    _items.removeAt(index);
+    _store.delete(id);
     notifyListeners();
+  }
+
+  AppUser _prepare(AppUser item) {
+    _validate(item);
+    return item.copyWith(
+      name: item.name.trim(),
+      email: item.email.trim().toLowerCase(),
+    );
   }
 
   void _validate(AppUser item) {
@@ -57,7 +47,7 @@ class MockUserRepository extends ChangeNotifier {
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
       throw ArgumentError('Invalid email.');
     }
-    if (_items.any((other) => other.id != item.id && other.email == email)) {
+    if (_store.any((other) => other.id != item.id && other.email == email)) {
       throw StateError('Email already exists.');
     }
   }

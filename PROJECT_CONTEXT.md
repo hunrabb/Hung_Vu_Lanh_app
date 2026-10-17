@@ -1,3 +1,60 @@
+### Generic service list UI — 17/10/2026
+
+ServiceCatalogScreen (shared by Manager and Boss) now renders its body using
+shared/widgets/data_list.dart: DataList<T> accepts typed items, itemBuilder,
+optional header and padding. The concrete page uses DataList<Service> and keeps
+service-card presentation, filtering, CRUD dialogs and role checks locally.
+The existing layout, spacing and Provider updates are preserved. This is a UI
+generic refactor, separate from the earlier generic repository/API helpers.
+
+### Dart generic cleanup ? 17/10/2026
+
+core/data/memory_store.dart provides MemoryStore<T, Id> for ordered RAM CRUD,
+identity lookup and immutable snapshots. Branch/Service/User mock repositories
+compose it; their seed behavior, error ordering, normalization, validation and
+success-only ChangeNotifier notifications are preserved. Domain models remain
+plain Dart, and Appointment retains its feature-specific conflict/state logic.
+ApiClient.requestObject<T>/requestList<T> centralize JSON-to-model decoding and
+delegate transport/authentication/timeout/401 handling to the existing request.
+Auth, booking, pending staff and workspace repositories use these typed helpers;
+session epochs, token barriers, role guards, routing and UI are unchanged.
+app.dart imports are grouped; no dependency or backend changes in this refactor.
+Generic regression tests cover immutable snapshots, failed writes and non-string
+IDs, plus authenticated/public API decoding and HTTP error propagation.
+
+### Profile route runtime repair and regression audit — 16/10/2026
+
+PATCH /api/auth/me existed in source but had not been activated in the running
+backend. Rebuilt and started the local API on port 3000; npm start now runs
+prestart/build to avoid stale dist after a restart. Added profile HTTP route/DTO,
+revoked-session and Flutter dialog/save/logout-race regression tests, plus
+backend/test-profile-live.cjs (run from backend/) that checks persisted fields,
+401/400/409 behavior using an isolated customer and cleans it up.
+Live Phase3 uncovered host/database clock skew: application created_at could be
+later than the database decision trigger's reviewed_at, causing CHECK failure
+and HTTP500. Leave creation now uses the existing database created_at default.
+Live Phase3 and Phase4/5 pass after the fix. The Flutter opt-in live test now
+awaits appointment refresh after changing sessions before requesting completion;
+it previously attempted mutation before its own list had loaded. Role guards
+remain unchanged. Backend is running in the background with the current build.
+
+### Customer profile and shared monthly reporting — 16/10/2026
+
+This checkout is the Flutter project root (there is no nested ktgk directory).
+Customer Profile now saves name/email/phone/address through PATCH /api/auth/me,
+with DTO whitelisting, locked user/credential revalidation and duplicate-email
+handling. Auth responses include address; async saves cannot restore signed-out
+sessions. Mock mode updates the existing shared repository.
+Appointments list includes staffName directly, preserving display for workers
+who are no longer eligible in the booking directory. Cards emphasize price below
+appointment details. Existing completed-appointment branch/staff reviews remain.
+Dashboard API adds previousMonth, unique completed registered customerCount and
+separate walkInCount. Revenue remains completed-only, integer money, Hanoi month
+boundaries converted to UTC and scoped by role/branch.
+seed-data.cjs runs 003 plus idempotent 007 demo completed appointments for current
+and previous months, linked to existing customers/staff/service snapshots. It
+skips future intervals and conflicting appointments, preserves existing edits.
+
 # PROJECT CONTEXT — Hệ thống Quản lý Chuỗi Cửa Hàng
 
 ### Customer services, visible bookings, calendar and reviews — 12/10/2026

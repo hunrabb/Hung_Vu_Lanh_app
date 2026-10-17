@@ -6,30 +6,23 @@ import '../../users/application/leave_request.dart';
 class WorkspaceRepository {
   WorkspaceRepository(this.api);
   final ApiClient api;
-  Future<List<StaffShift>> shifts(String? branchId) async =>
-      (await api.request(
-            'GET',
-            branchId == null
-                ? 'staff/me/shifts'
-                : 'branches/${Uri.encodeComponent(branchId)}/shifts',
-          ) as List)
-          .map((e) => StaffShift.fromJson(Map<String, dynamic>.from(e as Map)))
-          .toList();
-  Future<List<LeaveRequest>> leaves(bool own) async =>
-      (await api.request(
-            'GET',
-            own ? 'staff/me/leave-requests' : 'leave-requests',
-          ) as List)
-          .map(
-            (e) => LeaveRequest.fromJson(Map<String, dynamic>.from(e as Map)),
-          )
-          .toList();
-  Future<List<AppUser>> staff(String branchId) async =>
-      (await api.request('GET', 'users/branch/${Uri.encodeComponent(branchId)}')
-              as List)
-          .map((e) => AppUser.fromJson(Map<String, dynamic>.from(e as Map)))
-          .where((u) => u.isApproved)
-          .toList();
+  Future<List<StaffShift>> shifts(String? branchId) => api.requestList(
+    'GET',
+    branchId == null
+        ? 'staff/me/shifts'
+        : 'branches/${Uri.encodeComponent(branchId)}/shifts',
+    decode: StaffShift.fromJson,
+  );
+  Future<List<LeaveRequest>> leaves(bool own) => api.requestList(
+    'GET',
+    own ? 'staff/me/leave-requests' : 'leave-requests',
+    decode: LeaveRequest.fromJson,
+  );
+  Future<List<AppUser>> staff(String branchId) async => (await api.requestList(
+    'GET',
+    'users/branch/${Uri.encodeComponent(branchId)}',
+    decode: AppUser.fromJson,
+  )).where((user) => user.isApproved).toList();
   Future<Map<String, String>> branches() async => {
     for (final b
         in await api.request('GET', 'branches', authenticated: false) as List)
