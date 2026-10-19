@@ -1,9 +1,12 @@
+import 'base_entity.dart';
+
 enum ServiceCategory { haircut, massage, hairWash, perm, dye, shaving }
 
-class Service {
+class Service extends NamedEntity<String> {
   Service({
-    required this.id,
-    required this.name,
+    required super.id,
+    required super.name,
+    super.description,
     required this.category,
     required this.durationMinutes,
     required this.priceVnd,
@@ -14,7 +17,6 @@ class Service {
     }
   }
 
-  final String id, name;
   final ServiceCategory category;
 
   /// Stable category ID, shared with Staff.specializedCategoryIds.
@@ -25,15 +27,16 @@ class Service {
   factory Service.fromJson(Map<String, dynamic> json) => Service(
     id: json['id'] as String,
     name: json['name'] as String,
+    description: json['description'] as String? ?? '',
     category: ServiceCategory.values.byName(json['category'] as String),
     durationMinutes: json['durationMinutes'] as int,
     priceVnd: json['priceVnd'] as int,
     isActive: json['isActive'] as bool? ?? true,
   );
 
+  @override
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
+    ...super.toJson(),
     'category': category.name,
     'durationMinutes': durationMinutes,
     'priceVnd': priceVnd,
@@ -43,6 +46,7 @@ class Service {
   Service copyWith({
     String? id,
     String? name,
+    String? description,
     ServiceCategory? category,
     int? durationMinutes,
     int? priceVnd,
@@ -50,6 +54,7 @@ class Service {
   }) => Service(
     id: id ?? this.id,
     name: name ?? this.name,
+    description: description ?? this.description,
     category: category ?? this.category,
     durationMinutes: durationMinutes ?? this.durationMinutes,
     priceVnd: priceVnd ?? this.priceVnd,

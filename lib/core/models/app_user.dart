@@ -1,12 +1,15 @@
+import 'base_entity.dart';
+
 enum UserRole { superAdmin, manager, staff, customer }
 
 const _unset = Object();
 
 /// Public profile only. Credentials and JWT belong to authentication services.
-class AppUser {
+class AppUser extends NamedEntity<String> {
   AppUser({
-    required this.id,
-    required this.name,
+    required super.id,
+    required super.name,
+    super.description,
     required this.email,
     required this.role,
     required DateTime createdAt,
@@ -36,7 +39,7 @@ class AppUser {
     }
   }
 
-  final String id, name, email;
+  final String email;
   final UserRole role;
   final DateTime createdAt;
   final int loyaltyPoints;
@@ -49,6 +52,7 @@ class AppUser {
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
     id: json['id'] as String,
     name: json['name'] as String,
+    description: json['description'] as String? ?? '',
     email: json['email'] as String,
     role: UserRole.values.byName(
       json['role'] == 'boss' ? 'superAdmin' : json['role'] as String,
@@ -66,9 +70,9 @@ class AppUser {
     isApproved: json['isApproved'] as bool?,
   );
 
+  @override
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
+    ...super.toJson(),
     'email': email,
     'role': role.name,
     'createdAt': createdAt.toIso8601String(),
@@ -86,6 +90,7 @@ class AppUser {
   AppUser copyWith({
     String? id,
     String? name,
+    String? description,
     String? email,
     UserRole? role,
     DateTime? createdAt,
@@ -100,6 +105,7 @@ class AppUser {
   }) => AppUser(
     id: id ?? this.id,
     name: name ?? this.name,
+    description: description ?? this.description,
     email: email ?? this.email,
     role: role ?? this.role,
     createdAt: createdAt ?? this.createdAt,

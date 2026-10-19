@@ -1,12 +1,13 @@
+import 'base_entity.dart';
 import 'time_slot.dart';
 
 const _unsetRating = Object();
 
 enum AppointmentStatus { pending, confirmed, completed, cancelled, noShow }
 
-class Appointment {
+class Appointment extends BaseEntity<String> {
   Appointment({
-    required this.id,
+    required super.id,
     required this.branchId,
     required this.customerId,
     required this.staffId,
@@ -41,7 +42,7 @@ class Appointment {
     }
   }
 
-  final String id, customerId, staffId;
+  final String customerId, staffId;
   final String branchId;
   final List<String> serviceIds, serviceNamesSnapshot;
   final TimeSlot slot;
@@ -84,8 +85,9 @@ class Appointment {
     rating: json['rating'] as int?,
   );
 
+  @override
   Map<String, dynamic> toJson() => {
-    'id': id,
+    ...super.toJson(),
     'branchId': branchId,
     'customerId': customerId,
     'staffId': staffId,

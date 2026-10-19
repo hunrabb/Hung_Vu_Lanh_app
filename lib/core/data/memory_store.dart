@@ -1,3 +1,5 @@
+import '../utils/collection_utils.dart';
+
 /// Ordered RAM storage shared by mock repositories.
 /// Domain validation and permissions belong to the owning feature.
 class MemoryStore<T, Id> {
@@ -17,10 +19,7 @@ class MemoryStore<T, Id> {
 
   bool any(bool Function(T) test) => _items.any(test);
 
-  T? getById(Id id) {
-    final index = _indexOf(id);
-    return index < 0 ? null : _items[index];
-  }
+  T? getById(Id id) => findFirst<T>(_items, (item) => idOf(item) == id);
 
   void add(T item, {T Function(T)? prepare}) {
     if (_indexOf(idOf(item)) >= 0) throw StateError(duplicateMessage);

@@ -1,15 +1,16 @@
+import 'base_entity.dart';
 import 'time_slot.dart';
 
-class StaffShift {
+class StaffShift extends BaseEntity<String> {
   StaffShift({
-    required this.id,
+    required super.id,
     required this.staffId,
     this.branchId,
     required DateTime startAt,
     required DateTime endAt,
   }) : slot = TimeSlot(start: startAt, end: endAt);
 
-  final String id, staffId;
+  final String staffId;
   final String? branchId;
   final TimeSlot slot;
   DateTime get startAt => slot.start;
@@ -23,8 +24,9 @@ class StaffShift {
     endAt: DateTime.parse(json['endAt'] as String),
   );
 
+  @override
   Map<String, dynamic> toJson() => {
-    'id': id,
+    ...super.toJson(),
     'staffId': staffId,
     'branchId': branchId,
     'startAt': startAt.toIso8601String(),

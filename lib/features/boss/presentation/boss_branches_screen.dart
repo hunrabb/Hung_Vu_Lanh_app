@@ -2,88 +2,93 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/branch.dart';
+import '../../../shared/widgets/entity_list_screen.dart';
 import '../../branches/application/branch_provider.dart';
 import 'boss_widgets.dart';
 
-class BossBranchesScreen extends StatelessWidget {
+class BossBranchesScreen extends EntityListScreen<Branch> {
   const BossBranchesScreen({super.key});
   @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<BranchProvider>();
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
+  Color get backgroundColor => Colors.transparent;
+  @override
+  bool get useSafeArea => false;
+  @override
+  EdgeInsetsGeometry get listPadding =>
+      const EdgeInsets.fromLTRB(20, 20, 20, 100);
+  @override
+  List<Branch> items(BuildContext context) =>
+      context.watch<BranchProvider>().branches;
+  @override
+  Widget buildFloatingActionButton(BuildContext context) =>
+      FloatingActionButton.extended(
         onPressed: () => showDialog<void>(
           context: context,
-          builder: (_) => _BranchDialog(provider: provider),
+          builder: (_) =>
+              _BranchDialog(provider: context.read<BranchProvider>()),
         ),
         icon: const Icon(Icons.add),
         label: const Text('Thêm cơ sở'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+      );
+  @override
+  Widget buildHeader(BuildContext context, List<Branch> items) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text('${items.length} cơ sở · Hà Nội'),
+      const SizedBox(height: 16),
+      if (items.isEmpty) const BossPanel(child: Text('Chưa có cơ sở.')),
+    ],
+  );
+  @override
+  Widget buildItem(BuildContext context, Branch b) {
+    final provider = context.read<BranchProvider>();
+    return BossPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${provider.branches.length} cơ sở · Hà Nội'),
+          BossTag(b.name),
           const SizedBox(height: 16),
-          if (provider.branches.isEmpty)
-            const BossPanel(child: Text('Chưa có cơ sở.')),
-          ...provider.branches.map(
-            (b) => BossPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  BossTag(b.name),
-                  const SizedBox(height: 16),
-                  Text(b.address),
-                  const SizedBox(height: 8),
-                  Text(b.phone),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      TextButton.icon(
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Sửa'),
-                        onPressed: () => showDialog<void>(
-                          context: context,
-                          builder: (_) =>
-                              _BranchDialog(provider: provider, branch: b),
-                        ),
-                      ),
-                      TextButton.icon(
-                        icon: const Icon(Icons.delete_outline),
-                        label: const Text('Xóa'),
-                        onPressed: () async {
-                          final yes = await showDialog<bool>(
-                            context: context,
-                            builder: (c) => AlertDialog(
-                              title: const Text('Xóa cơ sở?'),
-                              content: Text(b.name),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(c, false),
-                                  child: const Text('Hủy'),
-                                ),
-                                FilledButton(
-                                  onPressed: () => Navigator.pop(c, true),
-                                  child: const Text('Xóa'),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (yes == true && context.mounted) {
-                            await bossAction(
-                              context,
-                              () => provider.delete(b.id),
-                            );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ],
+          Text(b.address),
+          const SizedBox(height: 8),
+          Text(b.phone),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            children: [
+              TextButton.icon(
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Sửa'),
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => _BranchDialog(provider: provider, branch: b),
+                ),
               ),
-            ),
+              TextButton.icon(
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Xóa'),
+                onPressed: () async {
+                  final yes = await showDialog<bool>(
+                    context: context,
+                    builder: (c) => AlertDialog(
+                      title: const Text('Xóa cơ sở?'),
+                      content: Text(b.name),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(c, false),
+                          child: const Text('Hủy'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(c, true),
+                          child: const Text('Xóa'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (yes == true && context.mounted) {
+                    await bossAction(context, () => provider.delete(b.id));
+                  }
+                },
+              ),
+            ],
           ),
         ],
       ),

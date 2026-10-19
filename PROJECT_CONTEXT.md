@@ -1,3 +1,25 @@
+### Generic function example — 17/10/2026
+
+core/utils/collection_utils.dart adds findFirst<T>, preserving the item type and
+returning null when absent. MemoryStore.getById and ApiAppointmentProvider use
+it for first-match lookup; ordering, early exit and permission/session guards
+are unchanged. GENERICS_ASSIGNMENT.md distinguishes generic functions/classes.
+
+### Generics coursework: entity and screen inheritance — 17/10/2026
+
+Plain Dart BaseEntity<Id> shares identity, hasSameIdentity and base toJson;
+NamedEntity<Id> adds name/description and matchesQuery. Core entities and leave/
+communication models inherit the appropriate base; TimeSlot remains a value
+object. AppUser/Service/Branch accept optional description and preserve it in
+copies/JSON; empty descriptions are omitted for legacy compatibility. Promotion
+maps name/description to existing title/subtitle wire keys. No backend columns
+or persistence for description were added; role/money/UTC/list rules unchanged.
+EntityListScreen<T extends BaseEntity<String>> implements the shared Scaffold
+and DataList layout. ServiceCatalogScreen and BossBranchesScreen inherit it,
+overriding typed data/card/header/action hooks while retaining UI and guards.
+GENERICS_ASSIGNMENT.md maps both assignment questions to the actual code.
+Entity inheritance tests supplement the existing model and UI regressions.
+
 ### Generic service list UI — 17/10/2026
 
 ServiceCatalogScreen (shared by Manager and Boss) now renders its body using

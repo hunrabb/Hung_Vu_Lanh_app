@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/utils/collection_utils.dart';
+
 import '../../auth/application/auth_controller.dart';
 import '../data/api_booking_repository.dart';
 import 'appointment_permissions.dart';
@@ -148,10 +150,10 @@ class ApiAppointmentProvider extends ChangeNotifier {
   }
 
   Future<void> act(String id, String action) async {
-    final item = [
+    final item = findFirst<ApiAppointment>([
       ...rows,
       ...upcoming,
-    ].where((row) => row.id == id).firstOrNull;
+    ], (row) => row.id == id);
     if (item == null || !canActOnAppointment(auth.currentUser, item, action)) {
       throw StateError(
         'Bạn không có quyền thực hiện thao tác với lịch hẹn này.',
@@ -185,7 +187,8 @@ class ApiAppointmentProvider extends ChangeNotifier {
   }
 
   String branchName(String id) =>
-      branches.where((b) => b['id'] == id).firstOrNull?['name'] as String? ??
+      findFirst<Map<String, dynamic>>(branches, (b) => b['id'] == id)?['name']
+          as String? ??
       id;
   @override
   void dispose() {

@@ -1,7 +1,9 @@
+import 'base_entity.dart';
+
 /// Opening times and calendar dates are interpreted in Vietnam local time.
-class ShopSettings {
+class ShopSettings extends BaseEntity<String> {
   ShopSettings({
-    this.id = 'default',
+    super.id = 'default',
     required this.branchId,
     required this.openingMinute,
     required this.closingMinute,
@@ -26,7 +28,6 @@ class ShopSettings {
     }
   }
 
-  final String id;
   final String branchId;
   final int openingMinute, closingMinute;
   final List<int> closedWeekdays;
@@ -41,8 +42,9 @@ class ShopSettings {
     closedDates: List<String>.from(json['closedDates'] as List? ?? const []),
   );
 
+  @override
   Map<String, dynamic> toJson() => {
-    'id': id,
+    ...super.toJson(),
     'branchId': branchId,
     'openingMinute': openingMinute,
     'closingMinute': closingMinute,

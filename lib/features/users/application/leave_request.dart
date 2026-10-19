@@ -1,3 +1,5 @@
+import '../../../core/models/base_entity.dart';
+
 enum LeaveStatus { pending, approved, rejected }
 
 String leaveLabel(LeaveStatus status) => switch (status) {
@@ -7,9 +9,9 @@ String leaveLabel(LeaveStatus status) => switch (status) {
 };
 
 /// View model for mock records and the existing staff_leave_requests API.
-class LeaveRequest {
+class LeaveRequest extends BaseEntity<String> {
   const LeaveRequest({
-    required this.id,
+    required super.id,
     required this.staffId,
     required this.staffName,
     required this.branchId,
@@ -25,7 +27,7 @@ class LeaveRequest {
     this.endAt,
     this.reason = '',
   });
-  final String id, staffId, staffName, branchId, date;
+  final String staffId, staffName, branchId, date;
   final DateTime createdAt;
   final LeaveStatus status;
   final String? reviewedBy;
@@ -78,4 +80,22 @@ class LeaveRequest {
     endAt: endAt,
     reason: reason,
   );
+  @override
+  Map<String, dynamic> toJson() => {
+    ...super.toJson(),
+    'staffId': staffId,
+    'staffName': staffName,
+    'branchId': branchId,
+    'leaveDate': date,
+    'createdAt': createdAt.toUtc().toIso8601String(),
+    'status': status.name,
+    'reviewedBy': reviewedBy,
+    'reviewedByName': reviewedByName,
+    'reviewedBranchName': reviewedBranchName,
+    'reviewedAt': reviewedAt?.toUtc().toIso8601String(),
+    'note': note,
+    'startAt': startAt?.toUtc().toIso8601String(),
+    'endAt': endAt?.toUtc().toIso8601String(),
+    'reason': reason,
+  };
 }

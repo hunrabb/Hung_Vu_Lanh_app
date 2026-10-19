@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/service.dart';
-import '../../../shared/widgets/data_list.dart';
+import '../../../shared/widgets/entity_list_screen.dart';
 import '../../../core/models/app_user.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../catalog/application/service_provider.dart';
 import '../../manager/presentation/manager_crud_dialogs.dart';
 
-class ServiceCatalogScreen extends StatelessWidget {
+class ServiceCatalogScreen extends EntityListScreen<Service> {
   const ServiceCatalogScreen({super.key, this.readOnly = true});
   final bool readOnly;
 
@@ -42,62 +42,59 @@ class ServiceCatalogScreen extends StatelessWidget {
     );
   }
 
+  bool _canEdit(BuildContext context) =>
+      !readOnly &&
+      context.watch<AuthController>().currentUser?.role == UserRole.superAdmin;
+
   @override
-  Widget build(BuildContext context) {
-    final canEdit =
-        !readOnly &&
-        context.watch<AuthController>().currentUser?.role ==
-            UserRole.superAdmin;
-    final services = context
-        .watch<ServiceProvider>()
-        .services
-        .where((s) => s.category != ServiceCategory.shaving)
-        .toList();
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFFFAF7F2),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Quản lý Dịch vụ',
-          style: TextStyle(
-            fontSize: 22,
-            color: Color(0xFF30251F),
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-        ),
+  List<Service> items(BuildContext context) => context
+      .watch<ServiceProvider>()
+      .services
+      .where((service) => service.category != ServiceCategory.shaving)
+      .toList();
+
+  @override
+  PreferredSizeWidget buildAppBar(BuildContext context) => AppBar(
+    automaticallyImplyLeading: false,
+    backgroundColor: const Color(0xFFFAF7F2),
+    surfaceTintColor: Colors.transparent,
+    elevation: 0,
+    title: const Text(
+      'Quản lý Dịch vụ',
+      style: TextStyle(
+        fontSize: 22,
+        color: Color(0xFF30251F),
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.5,
       ),
-      floatingActionButton: canEdit
-          ? FloatingActionButton(
-              heroTag: 'admin-add-service',
-              tooltip: 'Thêm dịch vụ',
-              backgroundColor: const Color(0xFF30251F),
-              foregroundColor: Colors.white,
-              elevation: 2,
-              onPressed: () => _edit(context),
-              child: const Icon(Icons.add),
-            )
-          : null,
-      body: SafeArea(
-        child: DataList<Service>(
-          items: services,
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
-          header: Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: Text(
-              '${services.length} dịch vụ · Chăm sóc & tạo kiểu',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF817368)),
-            ),
-          ),
-          itemBuilder: (context, service) =>
-              _buildServiceCard(context, service, canEdit: canEdit),
-        ),
-      ),
-    );
-  }
+    ),
+  );
+
+  @override
+  Widget? buildFloatingActionButton(BuildContext context) => _canEdit(context)
+      ? FloatingActionButton(
+          heroTag: 'admin-add-service',
+          tooltip: 'Thêm dịch vụ',
+          backgroundColor: const Color(0xFF30251F),
+          foregroundColor: Colors.white,
+          elevation: 2,
+          onPressed: () => _edit(context),
+          child: const Icon(Icons.add),
+        )
+      : null;
+
+  @override
+  Widget buildHeader(BuildContext context, List<Service> items) => Padding(
+    padding: const EdgeInsets.only(bottom: 24),
+    child: Text(
+      '${items.length} dịch vụ · Chăm sóc & tạo kiểu',
+      style: const TextStyle(fontSize: 12, color: Color(0xFF817368)),
+    ),
+  );
+
+  @override
+  Widget buildItem(BuildContext context, Service item) =>
+      _buildServiceCard(context, item, canEdit: _canEdit(context));
 
   Widget _buildServiceCard(
     BuildContext context,

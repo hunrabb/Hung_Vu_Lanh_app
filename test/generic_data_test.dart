@@ -3,12 +3,29 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 import 'package:ktgk/core/data/memory_store.dart';
+import 'package:ktgk/core/utils/collection_utils.dart';
 import 'package:ktgk/core/network/api_client.dart';
 import 'package:ktgk/core/network/token_store.dart';
 
 import 'api_integration_test.dart' show MemoryTokens, json;
 
 void main() {
+  test('generic function preserves type and stops at the first match', () {
+    var visited = 0;
+    final int? number = findFirst<int>([1, 2, 3], (value) {
+      visited++;
+      return value >= 2;
+    });
+    expect(number, 2);
+    expect(visited, 2);
+    final String? word = findFirst<String>([
+      'one',
+      'two',
+    ], (value) => value == 'two');
+    expect(word, 'two');
+    expect(findFirst<int>([], (_) => true), isNull);
+    expect(findFirst<int>([1, 2], (value) => value == 3), isNull);
+  });
   test('store preserves order, snapshots and data when preparation fails', () {
     final store = MemoryStore<({String id, int value}), String>(
       idOf: (row) => row.id,

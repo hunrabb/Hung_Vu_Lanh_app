@@ -1,12 +1,20 @@
-class Conversation {
+import '../../../core/models/base_entity.dart';
+
+class Conversation extends BaseEntity<String> {
   const Conversation({
-    required this.id,
+    required super.id,
     required this.customerId,
     required this.staffId,
     this.appointmentId,
   });
-  final String id;
   final String customerId;
   final String staffId;
   final String? appointmentId;
+  @override
+  Map<String, dynamic> toJson() => {
+    ...super.toJson(),
+    'customerId': customerId,
+    'staffId': staffId,
+    'appointmentId': appointmentId,
+  };
 }

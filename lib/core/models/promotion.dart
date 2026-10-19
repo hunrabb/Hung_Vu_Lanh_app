@@ -1,13 +1,17 @@
-class Promotion {
+import 'base_entity.dart';
+
+class Promotion extends NamedEntity<String> {
   const Promotion({
-    required this.id,
-    required this.title,
-    required this.subtitle,
+    required super.id,
+    required String title,
+    required String subtitle,
     required this.imageUrl,
     this.isActive = true,
-  });
+  }) : super(name: title, description: subtitle);
 
-  final String id, title, subtitle, imageUrl;
+  String get title => name;
+  String get subtitle => description;
+  final String imageUrl;
   final bool isActive;
 
   factory Promotion.fromJson(Map<String, dynamic> json) => Promotion(
@@ -18,6 +22,7 @@ class Promotion {
     isActive: json['isActive'] as bool? ?? true,
   );
 
+  @override
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
