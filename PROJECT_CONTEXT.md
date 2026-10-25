@@ -1,3 +1,43 @@
+### Firestore migration preparation — 25/10/2026
+
+NoSQL document import is now complete as a separate data-only step: a fresh Aiven
+snapshot of all 13 public tables (316 rows) became 207 top-level documents plus
+109 embedded rows in mobileapp-db88e/(default). Users embed 41 specialization
+links, appointments embed 64 ordered service snapshots, branches embed 4 settings.
+Original IDs replace staging hashes; all fields map snake_case to camelCase.
+TIMESTAMPTZ becomes native Timestamp preserving microseconds; DATE/DATE[] retain
+calendar strings; BIGINT money is native int64 (read via useBigInt). Credentials
+remain separate/private and preserve hashes/token versions. Atomic create-only
+batch and full target count/content checks passed; manifest _migrations/aiven-nosql-v1.
+Scripts: firestore-nosql.cjs + migrate-nosql.cjs (--write/--verify); source reader
+now casts date/timestamp arrays to text[] and uses UTC to avoid pg timezone loss.
+38 backend tests pass, including mapping/precision/refusal/verification coverage.
+See backend/FIRESTORE_NOSQL_SCHEMA.md. Aiven and original staging copy are retained.
+NestJS is STILL PostgreSQL; this does not implement Firestore runtime adapters or
+replicate subsequent source writes. No Flutter or generated platform edits made.
+
+User selected keeping NestJS/JWT while replacing Aiven PostgreSQL with Firestore,
+preserving all existing data. Credential metadata confirms project mobileapp-db88e;
+user selected database (default). Credential JSON is local in the project root,
+ignored by the root .gitignore; never print or commit its contents. IAM access now
+works; deployed client rules deny all reads/writes. On 25/10/2026 all 13 public
+tables (316 rows) were copied and every row/count verified under Firestore
+aiven_imports/3c126d9e-1064-42b9-85fc-8a5dfb3f72bc in (default). Empty tables are
+recorded in the run manifest; Firestore has no empty collection documents.
+Source Aiven remains unchanged. Backend adds firebase-admin and
+migrate-firestore.cjs: default read-only source validation, optional isolated
+staging copy with per-row/count verification. See backend/FIRESTORE_MIGRATION.md.
+Dates and precise numbers remain text in staging; keys and links remain intact.
+The verified staging import is complete; no production cutover occurred. NestJS still uses
+TypeORM/PostgreSQL; Firestore feature adapters, atomic constraints, indexes and
+API contract tests remain required before switching. Do not treat staging import
+as an implemented Firestore backend. Existing local NDK changes are unrelated.
+
+### Android NDK build configuration — 24/10/2026
+
+Android app Gradle configuration uses NDK 28.2.13676358, matching the version
+required by Flutter 3.47.5 and the JNI plugin's native build.
+
 ### Generic function example — 17/10/2026
 
 core/utils/collection_utils.dart adds findFirst<T>, preserving the item type and

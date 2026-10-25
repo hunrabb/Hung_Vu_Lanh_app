@@ -19,6 +19,8 @@ migrate_working_dir/
 .idea/
 
 # Local environment files (templates remain versioned)
+*-firebase-adminsdk-*.json
+*service-account*.json
 .env
 .env.*
 *.env

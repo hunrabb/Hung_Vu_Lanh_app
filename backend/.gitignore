@@ -5,3 +5,6 @@ dist/
 !.env.example
 ca.pem
 *.log
+secrets/
+*service-account*.json
+*-firebase-adminsdk-*.json
