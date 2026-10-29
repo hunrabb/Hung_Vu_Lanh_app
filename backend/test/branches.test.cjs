@@ -1,65 +1,58 @@
-require("reflect-metadata");
+﻿require("reflect-metadata");
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { Test } = require("@nestjs/testing");
-const { getRepositoryToken } = require("@nestjs/typeorm");
+const {
+  FirestoreModule,
+  FirestoreStore,
+} = require("../dist/firestore/firestore.store");
 const { BranchesModule } = require("../dist/branches/branches.module");
-const { Branch } = require("../dist/branches/branch.entity");
-const { ShopSettings } = require("../dist/branches/shop-settings.entity");
 const { validateEnvironment } = require("../dist/config/environment");
-
-test("GET /api/branches returns the database repository rows; prefix is required", async () => {
-  const rows = [
-    {
-      id: "branch-01",
-      name: "Cơ sở Cầu Giấy",
-      address: "Hà Nội",
-      phone: "0901000001",
-    },
-  ];
-  let options;
-  const module = await Test.createTestingModule({ imports: [BranchesModule] })
-    .overrideProvider(getRepositoryToken(Branch))
-    .useValue({
-      find: async (query) => {
-        options = query;
-        return rows;
-      },
-    })
-    .overrideProvider(getRepositoryToken(ShopSettings))
-    .useValue({})
+const { MemoryFirestore } = require("./support/firestore.cjs");
+test("GET /api/branches returns Firestore rows without embedded private settings; prefix required", async () => {
+  const row = {
+    id: "branch-01",
+    name: "Hanoi",
+    address: "Hanoi",
+    phone: "0901000001",
+  };
+  const module = await Test.createTestingModule({
+    imports: [FirestoreModule, BranchesModule],
+  })
+    .overrideProvider(FirestoreStore)
+    .useValue(
+      new MemoryFirestore({
+        branches: [{ ...row, settings: { openingMinute: 480 } }],
+      }),
+    )
     .compile();
   const app = module.createNestApplication({ logger: false });
   app.setGlobalPrefix("api");
   try {
     await app.listen(0, "127.0.0.1");
-    const response = await fetch(`${await app.getUrl()}/api/branches`);
-    assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), rows);
-    assert.deepEqual(options.order, { name: "ASC", id: "ASC" });
-    assert.equal((await fetch(`${await app.getUrl()}/branches`)).status, 404);
+    const url = await app.getUrl();
+    const r = await fetch(url + "/api/branches");
+    assert.equal(r.status, 200);
+    assert.deepEqual(await r.json(), [row]);
+    assert.equal((await fetch(url + "/branches")).status, 404);
   } finally {
     await app.close();
   }
 });
-
-test("database environment validates required variables and numeric ports", () => {
+test("Firestore environment requires project/database and validates JWT and port without PostgreSQL", () => {
   const env = {
-    DB_HOST: "localhost",
-    DB_PORT: "5432",
-    DB_NAME: "test",
-    DB_USER: "test",
-    DB_PASSWORD: "secret",
+    FIREBASE_PROJECT_ID: "demo-test",
+    FIRESTORE_DATABASE_ID: "(default)",
     JWT_SECRET: "test-secret-with-at-least-32-characters",
   };
-  assert.equal(validateEnvironment(env).DB_PORT, 5432);
   assert.equal(validateEnvironment(env).PORT, 3000);
-  assert.throws(
-    () => validateEnvironment({ ...env, DB_PASSWORD: "" }),
-    /DB_PASSWORD/,
-  );
-  assert.throws(
-    () => validateEnvironment({ ...env, DB_PORT: "not-a-port" }),
-    /DB_PORT/,
-  );
+  for (const changes of [
+    { FIREBASE_PROJECT_ID: "" },
+    { FIRESTORE_DATABASE_ID: "" },
+    { JWT_SECRET: "short" },
+    { PORT: "bad" },
+    { PORT: 65536 },
+    { JWT_TTL_SECONDS: 1 },
+  ])
+    assert.throws(() => validateEnvironment({ ...env, ...changes }));
 });

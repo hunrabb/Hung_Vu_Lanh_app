@@ -1,19 +1,17 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
-import { DataSource, EntityManager } from "typeorm";
+﻿import { ForbiddenException, Injectable } from "@nestjs/common";
 import { Actor } from "../auth/auth.decorators";
-import { requireRole } from "../common/mutations";
+import { FirestoreStore, Row, State } from "../firestore/firestore.store";
+import { page, requireRole, sorted } from "../firestore/rules";
 import { BossReportQueryDto, ReportQueryDto } from "./report.dto";
 import { reportPeriods, reportRange } from "./report-period";
 type Scope = { branchId: string | null; staffId: string | null };
 type Period = { from: Date; to: Date };
-// Aggregate the one-row-per-appointment source BEFORE any service-item enrichment.
-const BASE =
-  "FROM appointments a WHERE a.start_at >= $1 AND a.start_at < $2 AND ($3::text IS NULL OR a.branch_id=$3) AND ($4::text IS NULL OR a.staff_id=$4)";
-const BRANCH_TAGS =
-  "(SELECT jsonb_agg(jsonb_build_object('branchId',b.id,'branchName',b.name) ORDER BY b.id) FROM branches b WHERE b.id=ANY(t.branch_ids))";
+const names = ["appointments", "users", "branches"] as const;
+const total = (rows: Row[]) =>
+  rows.reduce((sum, r) => sum + BigInt(r.totalPriceVnd), 0n);
 @Injectable()
 export class ReportsService {
-  constructor(private readonly db: DataSource) {}
+  constructor(private readonly db: FirestoreStore) {}
   private scope(
     actor: Actor,
     role: "manager" | "staff" | "superAdmin",
@@ -27,71 +25,125 @@ export class ReportsService {
       staffId: role === "staff" ? actor.id : null,
     };
   }
-  private read<T>(work: (manager: EntityManager) => Promise<T>) {
-    return this.db.transaction("REPEATABLE READ", work);
-  }
-  private args(period: Period, scope: Scope) {
-    return [period.from, period.to, scope.branchId, scope.staffId];
-  }
-  private async metrics(m: EntityManager, period: Period, scope: Scope) {
-    const [row] = await m.query(
-      `SELECT COALESCE(SUM(a.total_price_vnd) FILTER(WHERE a.status='completed'),0)::text AS "revenueVnd",COUNT(*)::int AS "appointmentCount",COUNT(*) FILTER(WHERE a.status='completed')::int AS "completedCount",COUNT(*) FILTER(WHERE a.status='cancelled')::int AS "cancelledCount",COUNT(DISTINCT a.customer_id) FILTER(WHERE a.status='completed')::int AS "customerCount",COUNT(*) FILTER(WHERE a.status='completed' AND a.customer_id IS NULL)::int AS "walkInCount" ${BASE}`,
-      this.args(period, scope),
+  private rows(s: State, period: Period, scope: Scope) {
+    return s.appointments.filter(
+      (r) =>
+        +r.startAt >= +period.from &&
+        +r.startAt < +period.to &&
+        (!scope.branchId || r.branchId === scope.branchId) &&
+        (!scope.staffId || r.staffId === scope.staffId),
     );
-    return row;
+  }
+  private metrics(s: State, p: Period, scope: Scope) {
+    const rows = this.rows(s, p, scope),
+      done = rows.filter((r) => r.status === "completed");
+    return {
+      revenueVnd: total(done).toString(),
+      appointmentCount: rows.length,
+      completedCount: done.length,
+      cancelledCount: rows.filter((r) => r.status === "cancelled").length,
+      customerCount: new Set(
+        done.filter((r) => r.customerId !== null).map((r) => r.customerId),
+      ).size,
+      walkInCount: done.filter((r) => r.customerId === null).length,
+    };
   }
   private ledger(
-    m: EntityManager,
-    period: Period,
+    s: State,
+    p: Period,
     scope: Scope,
     q: ReportQueryDto,
-    status: string | null = null,
+    status?: string,
     upcoming = false,
   ) {
-    // Correlated JSON subquery returns one column per appointment, never multiplying rows.
-    return m.query(
-      `SELECT a.id,a.branch_id AS "branchId",b.name AS "branchName",a.staff_id AS "staffId",s.name AS "staffName",a.customer_id AS "customerId",a.customer_name AS "customerName",a.start_at AS "startAt",a.end_at AS "endAt",a.status,a.total_price_vnd::text AS "totalPriceVnd",COALESCE((SELECT jsonb_agg(jsonb_build_object('serviceId',i.service_id,'name',i.service_name_snapshot) ORDER BY i.position) FROM appointment_services i WHERE i.appointment_id=a.id),'[]'::jsonb) AS services
-   FROM appointments a JOIN branches b ON b.id=a.branch_id JOIN users s ON s.id=a.staff_id
-   WHERE a.start_at >= $1 AND a.start_at < $2 AND ($3::text IS NULL OR a.branch_id=$3) AND ($4::text IS NULL OR a.staff_id=$4) AND ($5::text IS NULL OR a.status=$5) ${upcoming ? "AND a.status IN ('pending','confirmed') AND a.end_at>$8" : ""}
-   ORDER BY a.start_at ${upcoming ? "ASC" : "DESC"},a.id ASC LIMIT $6 OFFSET $7`,
-      [
-        ...this.args(period, scope),
-        status,
-        q.limit,
-        (q.page - 1) * q.limit,
-        ...(upcoming ? [new Date()] : []),
-      ],
+    const rows = this.rows(s, p, scope).filter(
+      (r) =>
+        (!status || r.status === status) &&
+        (!upcoming ||
+          (["pending", "confirmed"].includes(r.status) &&
+            +r.endAt > Date.now())),
     );
+    return page(sorted(rows, "startAt", !upcoming), q).map((r) => ({
+      id: r.id,
+      branchId: r.branchId,
+      branchName:
+        s.branches.find((b) => b.id === r.branchId)?.name ?? r.branchId,
+      staffId: r.staffId,
+      staffName: s.users.find((u) => u.id === r.staffId)?.name ?? r.staffId,
+      customerId: r.customerId,
+      customerName: r.customerName,
+      startAt: r.startAt,
+      endAt: r.endAt,
+      status: r.status,
+      totalPriceVnd: String(r.totalPriceVnd),
+      services: r.services.map((i: Row) => ({
+        serviceId: i.serviceId,
+        name: i.serviceNameSnapshot,
+      })),
+    }));
   }
-  private staffRanking(
-    m: EntityManager,
-    period: Period,
+  private rankings(
+    s: State,
+    p: Period,
     scope: Scope,
-    limit = 100,
+    kind: "staff" | "branch",
     byCount = false,
   ) {
-    return m.query(
-      `WITH totals AS (SELECT a.staff_id,array_agg(DISTINCT a.branch_id) AS branch_ids,COUNT(*)::int AS completed_count,SUM(a.total_price_vnd)::text AS revenue ${BASE} AND a.status='completed' GROUP BY a.staff_id)
-   SELECT t.staff_id AS "staffId",s.name AS "staffName",${BRANCH_TAGS} AS branches,t.completed_count AS "completedCount",t.revenue AS "revenueVnd" FROM totals t JOIN users s ON s.id=t.staff_id ORDER BY ${byCount ? "t.completed_count DESC,t.revenue::numeric DESC" : "t.revenue::numeric DESC,t.completed_count DESC"},t.staff_id LIMIT $5`,
-      [...this.args(period, scope), limit],
+    const rows = this.rows(s, p, scope).filter((r) => r.status === "completed"),
+      key = kind === "staff" ? "staffId" : "branchId";
+    const result = [...new Set(rows.map((r) => r[key]))].map((id) => {
+      const group = rows.filter((r) => r[key] === id);
+      return kind === "branch"
+        ? {
+            branchId: id,
+            branchName: s.branches.find((b) => b.id === id)?.name ?? id,
+            revenueVnd: total(group).toString(),
+            completedCount: group.length,
+          }
+        : {
+            staffId: id,
+            staffName: s.users.find((u) => u.id === id)?.name ?? id,
+            branches: [...new Set<string>(group.map((r) => r.branchId))]
+              .sort()
+              .map((branchId) => ({
+                branchId,
+                branchName:
+                  s.branches.find((b) => b.id === branchId)?.name ?? branchId,
+              })),
+            revenueVnd: total(group).toString(),
+            completedCount: group.length,
+          };
+    });
+    return result.sort(
+      (a: Row, b: Row) =>
+        (byCount ? b.completedCount - a.completedCount : 0) ||
+        (BigInt(a.revenueVnd) > BigInt(b.revenueVnd)
+          ? -1
+          : BigInt(a.revenueVnd) < BigInt(b.revenueVnd)
+            ? 1
+            : 0) ||
+        (!byCount && kind === "staff"
+          ? b.completedCount - a.completedCount
+          : 0) ||
+        String(a[key]).localeCompare(String(b[key])),
     );
   }
   dashboard(actor: Actor, boss = false, branchId?: string) {
     const scope = this.scope(actor, boss ? "superAdmin" : "manager", branchId),
       periods = reportPeriods();
-    return this.read(async (m) => ({
+    return this.db.read(names, (s) => ({
       branchId: scope.branchId,
       timezone: "Asia/Ho_Chi_Minh",
       periods,
-      today: await this.metrics(m, periods.day, scope),
-      month: await this.metrics(m, periods.month, scope),
-      previousMonth: await this.metrics(m, periods.previousMonth, scope),
-      upcoming: await this.ledger(
-        m,
+      today: this.metrics(s, periods.day, scope),
+      month: this.metrics(s, periods.month, scope),
+      previousMonth: this.metrics(s, periods.previousMonth, scope),
+      upcoming: this.ledger(
+        s,
         periods.day,
         scope,
         { page: 1, limit: 100 },
-        null,
+        undefined,
         true,
       ),
     }));
@@ -99,12 +151,12 @@ export class ReportsService {
   revenue(actor: Actor, q: ReportQueryDto) {
     const scope = this.scope(actor, "manager"),
       period = reportRange(q);
-    return this.read(async (m) => ({
+    return this.db.read(names, (s) => ({
       branchId: scope.branchId,
       period,
-      ...(await this.metrics(m, period, scope)),
-      transactions: await this.ledger(m, period, scope, q, "completed"),
-      staffRanking: await this.staffRanking(m, period, scope),
+      ...this.metrics(s, period, scope),
+      transactions: this.ledger(s, period, scope, q, "completed"),
+      staffRanking: this.rankings(s, period, scope, "staff").slice(0, 100),
       page: q.page,
       limit: q.limit,
     }));
@@ -112,49 +164,55 @@ export class ReportsService {
   leaderboards(actor: Actor, q: BossReportQueryDto) {
     const scope = this.scope(actor, "superAdmin", q.branchId),
       period = reportRange(q);
-    return this.read(async (m) => ({
+    return this.db.read(names, (s) => ({
       period,
-      branches: await m.query(
-        `WITH totals AS (SELECT a.branch_id,SUM(a.total_price_vnd)::text AS revenue,COUNT(*)::int AS completed_count ${BASE} AND a.status='completed' GROUP BY a.branch_id) SELECT b.id AS "branchId",b.name AS "branchName",t.revenue AS "revenueVnd",t.completed_count AS "completedCount" FROM totals t JOIN branches b ON b.id=t.branch_id ORDER BY t.revenue::numeric DESC,b.id LIMIT $5`,
-        [...this.args(period, scope), q.limit],
-      ),
-      staff: await this.staffRanking(m, period, scope, q.limit, true),
+      branches: this.rankings(s, period, scope, "branch").slice(0, q.limit),
+      staff: this.rankings(s, period, scope, "staff", true).slice(0, q.limit),
     }));
   }
   masterLedger(actor: Actor, q: BossReportQueryDto) {
     const scope = this.scope(actor, "superAdmin", q.branchId),
       period = reportRange(q);
-    return this.read(async (m) => ({
+    return this.db.read(names, (s) => ({
       period,
       page: q.page,
       limit: q.limit,
-      appointments: await this.ledger(m, period, scope, q, q.status ?? null),
+      appointments: this.ledger(s, period, scope, q, q.status),
     }));
   }
   commissions(actor: Actor, q: BossReportQueryDto) {
     const scope = this.scope(actor, "superAdmin", q.branchId),
       period = reportRange(q);
-    return this.read(async (m) => ({
+    return this.db.read(names, (s) => ({
       period,
       ratePercent: 30,
       isEstimate: true,
-      staff: await m.query(
-        `WITH totals AS (SELECT a.staff_id,array_agg(DISTINCT a.branch_id) AS branch_ids,COUNT(*)::int AS completed_count,SUM(a.total_price_vnd) AS revenue ${BASE} AND a.status='completed' GROUP BY a.staff_id) SELECT t.staff_id AS "staffId",s.name AS "staffName",${BRANCH_TAGS} AS branches,t.completed_count AS "completedCount",t.revenue::text AS "revenueVnd",floor(t.revenue*30/100)::text AS "commissionVnd" FROM totals t JOIN users s ON s.id=t.staff_id ORDER BY t.revenue DESC,t.staff_id LIMIT $5 OFFSET $6`,
-        [...this.args(period, scope), q.limit, (q.page - 1) * q.limit],
-      ),
+      staff: page(
+        this.rankings(s, period, scope, "staff").sort((a: Row, b: Row) =>
+          BigInt(a.revenueVnd) === BigInt(b.revenueVnd)
+            ? a.staffId.localeCompare(b.staffId)
+            : BigInt(a.revenueVnd) > BigInt(b.revenueVnd)
+              ? -1
+              : 1,
+        ),
+        q,
+      ).map((r) => ({
+        ...r,
+        commissionVnd: ((BigInt(r.revenueVnd) * 30n) / 100n).toString(),
+      })),
     }));
   }
   earnings(actor: Actor, q: ReportQueryDto) {
     const scope = this.scope(actor, "staff"),
       periods = reportPeriods(),
       period = reportRange(q);
-    return this.read(async (m) => ({
+    return this.db.read(names, (s) => ({
       periods,
-      today: await this.metrics(m, periods.day, scope),
-      month: await this.metrics(m, periods.month, scope),
-      previousMonth: await this.metrics(m, periods.previousMonth, scope),
+      today: this.metrics(s, periods.day, scope),
+      month: this.metrics(s, periods.month, scope),
+      previousMonth: this.metrics(s, periods.previousMonth, scope),
       period,
-      transactions: await this.ledger(m, period, scope, q, "completed"),
+      transactions: this.ledger(s, period, scope, q, "completed"),
       page: q.page,
       limit: q.limit,
     }));
@@ -162,25 +220,45 @@ export class ReportsService {
   profileStats(actor: Actor, q: ReportQueryDto) {
     const scope = this.scope(actor, "staff"),
       month = reportPeriods().month;
-    return this.read(async (m) => {
-      const [reviews] = await m.query(
-        `SELECT COUNT(*)::int AS "reviewCount",AVG(a.rating)::float8 AS "averageRating" FROM appointments a WHERE a.staff_id=$1 AND a.branch_id=$2 AND a.status='completed' AND a.is_reviewed AND a.rating IS NOT NULL`,
-        [scope.staffId, scope.branchId],
-      );
-      const [customers] = await m.query(
-        `SELECT COUNT(DISTINCT customer_id)::int AS "registeredCustomerCount",COUNT(*) FILTER(WHERE customer_id IS NULL)::int AS "walkInCompletedCount" FROM appointments WHERE staff_id=$1 AND branch_id=$2 AND status='completed'`,
-        [scope.staffId, scope.branchId],
-      );
-      const list = await m.query(
-        `WITH totals AS (SELECT customer_id,COUNT(*)::int AS visits,SUM(total_price_vnd)::text AS revenue,MAX(end_at) AS last_visit FROM appointments WHERE staff_id=$1 AND branch_id=$2 AND status='completed' AND customer_id IS NOT NULL GROUP BY customer_id) SELECT t.customer_id AS "customerId",u.name AS "customerName",t.visits AS "completedVisits",t.revenue AS "totalSpentVnd",t.last_visit AS "lastVisitAt" FROM totals t JOIN users u ON u.id=t.customer_id ORDER BY t.last_visit DESC,t.customer_id LIMIT $3 OFFSET $4`,
-        [scope.staffId, scope.branchId, q.limit, (q.page - 1) * q.limit],
-      );
+    return this.db.read(names, (s) => {
+      const rows = s.appointments.filter(
+          (r) =>
+            r.staffId === scope.staffId &&
+            r.branchId === scope.branchId &&
+            r.status === "completed",
+        ),
+        reviews = rows.filter((r) => r.isReviewed && r.rating !== null);
+      const customers = [
+        ...new Set(
+          rows.filter((r) => r.customerId !== null).map((r) => r.customerId),
+        ),
+      ]
+        .map((customerId) => {
+          const visits = rows.filter((r) => r.customerId === customerId);
+          return {
+            customerId,
+            customerName:
+              s.users.find((u) => u.id === customerId)?.name ?? customerId,
+            completedVisits: visits.length,
+            totalSpentVnd: total(visits).toString(),
+            lastVisitAt: new Date(Math.max(...visits.map((r) => +r.endAt))),
+          };
+        })
+        .sort(
+          (a, b) =>
+            +b.lastVisitAt - +a.lastVisitAt ||
+            a.customerId.localeCompare(b.customerId),
+        );
       return {
         month,
-        monthly: await this.metrics(m, month, scope),
-        ...reviews,
-        ...customers,
-        customers: list,
+        monthly: this.metrics(s, month, scope),
+        reviewCount: reviews.length,
+        averageRating: reviews.length
+          ? reviews.reduce((n, r) => n + r.rating, 0) / reviews.length
+          : null,
+        registeredCustomerCount: customers.length,
+        walkInCompletedCount: rows.filter((r) => r.customerId === null).length,
+        customers: page(customers, q),
         page: q.page,
         limit: q.limit,
       };

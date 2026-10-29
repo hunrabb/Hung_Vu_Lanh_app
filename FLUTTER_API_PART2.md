@@ -1,3 +1,5 @@
+> Historical implementation notes. Current backend uses Firestore; legacy SQL scripts and setup have been removed. Use [Firestore runtime guide](backend/FIRESTORE_RUNTIME.md) for current setup and tests.
+
 # Flutter API Phần2 — Ca làm và nghỉ phép
 
 WorkspaceRepository/WorkspaceProvider đọc và ghi NestJS, không fallback mock.

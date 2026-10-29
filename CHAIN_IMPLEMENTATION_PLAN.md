@@ -1,3 +1,5 @@
+> Historical implementation notes. Current backend uses Firestore; legacy SQL scripts and setup have been removed. Use [Firestore runtime guide](backend/FIRESTORE_RUNTIME.md) for current setup and tests.
+
 # Kế hoạch chuyển đổi sang Chain Management
 
 **Ngày rà soát:** 07/10/2026 · **Phạm vi:** dự án `ktgk`

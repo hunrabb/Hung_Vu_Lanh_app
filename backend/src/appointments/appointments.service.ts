@@ -1,92 +1,58 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
-  NotFoundException,
 } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
 import { Actor } from "../auth/auth.decorators";
-import { requireRole, scopedMutation } from "../common/mutations";
-import { ShopSettings } from "../branches/shop-settings.entity";
-import { User } from "../users/user.entity";
-import {
-  Appointment,
-  AppointmentServiceItem,
-  AppointmentStatus,
-} from "./appointment.entity";
+import { FirestoreStore, Row, wire } from "../firestore/firestore.store";
+import { get, mutation, page, requireRole, sorted } from "../firestore/rules";
 import { AppointmentQueryDto } from "./appointment.dto";
-import { retryTransaction } from "./booking.service";
 @Injectable()
 export class AppointmentsService {
-  constructor(
-    @InjectRepository(Appointment)
-    private readonly appointments: Repository<Appointment>,
-  ) {}
-  async list(query: AppointmentQueryDto, actor: Actor) {
+  constructor(private readonly db: FirestoreStore) {}
+  async list(q: AppointmentQueryDto, actor: Actor) {
     requireRole(actor, ["customer", "staff", "manager", "superAdmin"]);
     if (
-      (actor.role === "manager" || actor.role === "staff") &&
-      query.branchId &&
-      query.branchId !== actor.branchId
+      ["manager", "staff"].includes(actor.role) &&
+      q.branchId &&
+      q.branchId !== actor.branchId
     )
       throw new ForbiddenException("Branch access denied");
-    if (query.from && query.to && new Date(query.from) >= new Date(query.to))
+    if (q.from && q.to && new Date(q.from) >= new Date(q.to))
       throw new BadRequestException("Invalid date range");
-    const q = this.appointments.createQueryBuilder("a");
-    if (actor.role === "customer")
-      q.andWhere("a.customer_id=:owner AND a.is_hidden_by_customer=false", {
-        owner: actor.id,
-      });
-    if (actor.role === "staff")
-      q.andWhere("a.staff_id=:owner AND a.is_hidden_by_staff=false", {
-        owner: actor.id,
-      });
-    const branchId =
-      actor.role === "manager" || actor.role === "staff"
+    return this.db.read(["appointments", "users"], (s) => {
+      const branch = ["manager", "staff"].includes(actor.role)
         ? actor.branchId
-        : query.branchId;
-    if (branchId) q.andWhere("a.branch_id=:branchId", { branchId });
-    if (query.status) q.andWhere("a.status=:status", { status: query.status });
-    if (query.from) q.andWhere("a.start_at>=:from", { from: query.from });
-    if (query.to) q.andWhere("a.start_at<:to", { to: query.to });
-    const rows = await q
-      .orderBy("a.start_at", "DESC")
-      .addOrderBy("a.id", "ASC")
-      .skip((query.page - 1) * query.limit)
-      .take(query.limit)
-      .getMany();
-    const items = rows.length
-      ? await this.appointments.manager.find(AppointmentServiceItem, {
-          where: { appointmentId: In(rows.map((r) => r.id)) },
-          order: { position: "ASC" },
-        })
-      : [];
-    const staff = rows.length ? await this.appointments.manager.find(User, {
-      where: { id: In([...new Set(rows.map((r) => r.staffId))]) },
-      select: { id: true, name: true },
-    }) : [];
-    return rows.map((row) => ({
-      staffName: staff.find((person) => person.id === row.staffId)?.name ?? row.staffId,
-      ...row,
-      services: items.filter((item) => item.appointmentId === row.id),
-    }));
+        : q.branchId;
+      const rows = s.appointments.filter(
+        (r) =>
+          (!branch || r.branchId === branch) &&
+          (!q.status || r.status === q.status) &&
+          (!q.from || +r.startAt >= +new Date(q.from)) &&
+          (!q.to || +r.startAt < +new Date(q.to)) &&
+          (actor.role !== "customer" ||
+            (r.customerId === actor.id && !r.isHiddenByCustomer)) &&
+          (actor.role !== "staff" ||
+            (r.staffId === actor.id && !r.isHiddenByStaff)),
+      );
+      return page(sorted(rows, "startAt", true), q).map((r) => ({
+        staffName: s.users.find((u) => u.id === r.staffId)?.name ?? r.staffId,
+        ...wire("appointments", r),
+      }));
+    });
   }
-  private scope(row: Appointment, actor: Actor, action: string) {
-    if (actor.role === "superAdmin" && action === "cancel") return;
-    if (actor.role === "manager" && row.branchId === actor.branchId) return;
+  private scope(r: Row, actor: Actor, action: string) {
     if (
-      actor.role === "customer" &&
-      row.customerId === actor.id &&
-      ["cancel", "hideCustomer"].includes(action)
-    )
-      return;
-    if (
-      actor.role === "staff" &&
-      row.staffId === actor.id &&
-      row.branchId === actor.branchId &&
-      ["completed", "noShow", "hideStaff"].includes(action)
+      (actor.role === "superAdmin" && action === "cancel") ||
+      (actor.role === "manager" && r.branchId === actor.branchId) ||
+      (actor.role === "customer" &&
+        r.customerId === actor.id &&
+        ["cancel", "hideCustomer"].includes(action)) ||
+      (actor.role === "staff" &&
+        r.staffId === actor.id &&
+        r.branchId === actor.branchId &&
+        ["completed", "noShow", "hideStaff"].includes(action))
     )
       return;
     throw new ForbiddenException("Appointment access denied");
@@ -104,61 +70,25 @@ export class AppointmentsService {
           : action === "hideStaff"
             ? (["staff"] as const)
             : (["manager", "staff"] as const);
-    requireRole(actor, [...roles]);
-    const before = await this.appointments.findOneBy({ id });
-    if (!before) throw new NotFoundException("Appointment not found");
-    this.scope(before, actor, action);
-    return retryTransaction(() =>
-      scopedMutation(
-        this.appointments,
-        actor,
-        [...roles],
-        async (manager, current) => {
-          const row = await manager.findOne(Appointment, {
-            where: { id },
-            lock: { mode: "pessimistic_write" },
-          });
-          if (!row) throw new NotFoundException();
-          if (
-            row.branchId !== before.branchId ||
-            row.staffId !== before.staffId
-          )
-            throw new ConflictException("Appointment identity changed");
-          this.scope(
-            row,
-            { ...current, tokenVersion: actor.tokenVersion },
-            action,
-          );
-          if (action === "hideCustomer" || action === "hideStaff") {
-            if (!["completed", "cancelled", "noShow"].includes(row.status))
-              throw new ConflictException(
-                "Only ended appointments may be hidden",
-              );
-            if (action === "hideCustomer") row.isHiddenByCustomer = true;
-            else row.isHiddenByStaff = true;
-          } else {
-            if (
-              action === "cancel"
-                ? !["pending", "confirmed"].includes(row.status)
-                : row.status !== "confirmed"
-            )
-              throw new ConflictException("Invalid appointment transition");
-            row.status = action === "cancel" ? "cancelled" : action;
-          }
-          return manager.save(Appointment, row);
-        },
-        async (manager) => {
-          // Historical Staff can move branch; lock identity without rewriting its snapshot.
-          await manager.findOne(ShopSettings, {
-            where: { branchId: before.branchId },
-            lock: { mode: "pessimistic_read" },
-          });
-          await manager.findOne(User, {
-            where: { id: before.staffId },
-            lock: { mode: "pessimistic_write" },
-          });
-        },
-      ),
-    );
+    return mutation(this.db, ["appointments"], actor, roles, (s, user) => {
+      const row = get(s, "appointments", id);
+      this.scope(row, user as Actor, action);
+      if (action === "hideCustomer" || action === "hideStaff") {
+        if (!["completed", "cancelled", "noShow"].includes(row.status))
+          throw new ConflictException("Only ended appointments may be hidden");
+        row[
+          action === "hideCustomer" ? "isHiddenByCustomer" : "isHiddenByStaff"
+        ] = true;
+      } else {
+        if (
+          action === "cancel"
+            ? !["pending", "confirmed"].includes(row.status)
+            : row.status !== "confirmed"
+        )
+          throw new ConflictException("Invalid appointment transition");
+        row.status = action === "cancel" ? "cancelled" : action;
+      }
+      return wire("appointments", row);
+    });
   }
 }

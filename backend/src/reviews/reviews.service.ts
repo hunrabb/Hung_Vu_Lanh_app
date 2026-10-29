@@ -1,49 +1,40 @@
-import {
+﻿import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  NotFoundException,
 } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
 import { Actor } from "../auth/auth.decorators";
-import { scopedMutation } from "../common/mutations";
-import { Appointment } from "../appointments/appointment.entity";
-import { Review } from "./review.entity";
+import { FirestoreStore, wire } from "../firestore/firestore.store";
+import { get, mutation, sorted } from "../firestore/rules";
 import { CreateReviewDto, ReviewQueryDto } from "./review.dto";
-
 @Injectable()
 export class ReviewsService {
-  constructor(
-    @InjectRepository(Review) private readonly reviews: Repository<Review>,
-  ) {}
+  constructor(private readonly db: FirestoreStore) {}
   async create(id: string, dto: CreateReviewDto, actor: Actor) {
-    return scopedMutation(
-      this.reviews,
+    return mutation(
+      this.db,
+      ["appointments", "reviews"],
       actor,
       ["customer"],
-      async (manager, current) => {
-        const appointment = await manager.findOne(Appointment, {
-          where: { id },
-          lock: { mode: "pessimistic_write" },
-        });
-        if (!appointment) throw new NotFoundException("Appointment not found");
+      (s, current) => {
+        const appointment = get(s, "appointments", id);
         if (appointment.customerId !== current.id)
           throw new ForbiddenException("Only the booking owner may review");
         if (appointment.status !== "completed")
           throw new ConflictException(
             "Only completed appointments may be reviewed",
           );
-        const existing = await manager.findOne(Review, {
-          where: { appointmentId: id, target: dto.target },
-        });
-        if (existing)
+        if (
+          s.reviews.some(
+            (r) => r.appointmentId === id && r.targetType === dto.target,
+          )
+        )
           throw new ConflictException(
             "You already reviewed this target for this appointment",
           );
-        const review = manager.create(Review, {
+        const review = {
           appointmentId: id,
-          target: dto.target,
+          targetType: dto.target,
           targetId:
             dto.target === "branch"
               ? appointment.branchId
@@ -52,34 +43,36 @@ export class ReviewsService {
           rating: dto.rating,
           comment: dto.comment?.trim() ?? "",
           createdAt: new Date(),
-        });
-        await manager.insert(Review, review);
-        if (dto.target === "staff") {
-          await manager.update(
-            Appointment,
-            { id },
-            { isReviewed: true, rating: dto.rating },
-          );
-        }
-        return review;
+        };
+        s.reviews.push(review);
+        if (dto.target === "staff")
+          Object.assign(appointment, { isReviewed: true, rating: dto.rating });
+        return wire("reviews", review);
       },
     );
   }
-  async list(query: ReviewQueryDto) {
-    const parameters = [query.target, query.targetId];
-    const [summary] = await this.reviews.manager.query(
-      `SELECT count(*)::int AS count, coalesce(avg(rating),0)::float8 AS average
-       FROM reviews WHERE target_type=$1 AND target_id=$2`,
-      parameters,
-    );
-    const items = await this.reviews.manager.query(
-      `SELECT r.appointment_id AS "appointmentId", r.target_type AS target,
-        r.target_id AS "targetId", r.rating, r.comment, r.created_at AS "createdAt", u.name AS "customerName"
-       FROM reviews r JOIN users u ON u.id=r.customer_id
-       WHERE r.target_type=$1 AND r.target_id=$2
-       ORDER BY r.created_at DESC, r.appointment_id LIMIT 20 OFFSET $3`,
-      [...parameters, (query.page - 1) * 20],
-    );
-    return { ...summary, items };
+  list(q: ReviewQueryDto) {
+    return this.db.read(["reviews", "users"], (s) => {
+      const rows = sorted(
+        s.reviews.filter(
+          (r) => r.targetType === q.target && r.targetId === q.targetId,
+        ),
+        "createdAt",
+        true,
+      );
+      return {
+        count: rows.length,
+        average: rows.length
+          ? rows.reduce((n, r) => n + r.rating, 0) / rows.length
+          : 0,
+        items: rows.slice((q.page - 1) * 20, q.page * 20).map((r) => {
+          const { customerId, ...item } = wire("reviews", r);
+          return {
+            ...item,
+            customerName: s.users.find((u) => u.id === customerId)?.name ?? "",
+          };
+        }),
+      };
+    });
   }
 }

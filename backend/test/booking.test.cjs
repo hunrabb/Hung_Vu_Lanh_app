@@ -21,14 +21,6 @@ const {
   AppointmentsService,
 } = require("../dist/appointments/appointments.service");
 const minute = 60000;
-test("PostgreSQL DATE array preserves calendar date on local timezone hosts", () => {
-  const { calendarDates } = require("../dist/branches/shop-settings.entity");
-  assert.deepEqual(calendarDates.from([new Date(2033, 5, 20), "2033-06-21"]), [
-    "2033-06-20",
-    "2033-06-21",
-  ]);
-  assert.deepEqual(calendarDates.to(["2033-06-20"]), ["2033-06-20"]);
-});
 test("Hanoi day uses UTC+7, ISO weekday and rejects nonexistent dates", () => {
   assert.equal(
     new Date(hanoiDay("2031-01-05").start).toISOString(),
@@ -157,79 +149,62 @@ test("booking and transitions enforce roles and ownership before writes", async 
   const booking = new BookingService({});
   assert.throws(() => booking.book({}, { role: "staff" }));
   assert.throws(() => booking.book({}, { role: "customer" }, true));
-  const ops = new AppointmentsService({
-    findOneBy: async () => ({
-      id: "A",
+  const { MemoryFirestore } = require("./support/firestore.cjs");
+  const actors = [
+    {
+      id: "m",
+      role: "manager",
+      branchId: "else",
+      tokenVersion: 0,
+      isApproved: true,
+    },
+    {
+      id: "else",
+      role: "customer",
+      branchId: null,
+      tokenVersion: 0,
+      isApproved: true,
+    },
+    {
+      id: "worker",
+      role: "staff",
       branchId: "B",
-      staffId: "S",
-      customerId: "C",
+      tokenVersion: 0,
+      isApproved: true,
+    },
+  ];
+  const ops = new AppointmentsService(
+    new MemoryFirestore({
+      users: actors,
+      auth_credentials: actors.map((u) => ({ userId: u.id, tokenVersion: 0 })),
+      appointments: [{ id: "A", branchId: "B", staffId: "S", customerId: "C" }],
     }),
-  });
-  await assert.rejects(
-    ops.act("A", "completed", { role: "manager", branchId: "else" }),
   );
   await assert.rejects(
-    ops.act("A", "cancel", { role: "customer", id: "else" }),
+    ops.act("A", "completed", {
+      id: "m",
+      role: "manager",
+      branchId: "else",
+      tokenVersion: 0,
+    }),
   );
   await assert.rejects(
-    ops.act("A", "completed", { role: "staff", id: "else", branchId: "B" }),
+    ops.act("A", "cancel", {
+      role: "customer",
+      id: "else",
+      branchId: null,
+      tokenVersion: 0,
+    }),
+  );
+  await assert.rejects(
+    ops.act("A", "completed", {
+      role: "staff",
+      id: "worker",
+      branchId: "B",
+      tokenVersion: 0,
+    }),
   );
   await assert.rejects(
     ops.list({ branchId: "other" }, { role: "manager", branchId: "B" }),
-  );
-});
-test("deadlocks/serialization failures retry whole work, overlap never retries", async () => {
-  let tries = 0;
-  assert.equal(
-    await retryTransaction(async () => {
-      if (++tries < 3) throw Object.assign(new Error(), { code: "40P01" });
-      return "committed";
-    }),
-    "committed",
-  );
-  assert.equal(tries, 3);
-  tries = 0;
-  await assert.rejects(
-    retryTransaction(async () => {
-      tries++;
-      throw Object.assign(new Error(), { code: "23P01" });
-    }),
-  );
-  assert.equal(tries, 1);
-  tries = 0;
-  await assert.rejects(
-    retryTransaction(async () => {
-      tries++;
-      throw Object.assign(new Error(), { code: "40001" });
-    }),
-    /Calendar busy/,
-  );
-  assert.equal(tries, 3);
-});
-test("database exclusion 23P01 maps to HTTP 409", async () => {
-  const { scopedMutation } = require("../dist/common/mutations");
-  const actor = {
-    id: "C",
-    role: "customer",
-    branchId: null,
-    isApproved: true,
-    tokenVersion: 0,
-  };
-  const repo = {
-    manager: {
-      connection: {
-        transaction: async (work) =>
-          work({
-            findOne: async (entity) =>
-              entity.name === "User" ? actor : { tokenVersion: 0 },
-          }),
-      },
-    },
-  };
-  await assert.rejects(
-    scopedMutation(repo, actor, ["customer"], async () => {
-      throw Object.assign(new Error(), { code: "23P01" });
-    }),
-    (error) => error.getStatus() === 409,
   );
 });

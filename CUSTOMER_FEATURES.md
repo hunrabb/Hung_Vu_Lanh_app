@@ -1,3 +1,5 @@
+> Historical implementation notes. Current backend uses Firestore; legacy SQL scripts and setup have been removed. Use [Firestore runtime guide](backend/FIRESTORE_RUNTIME.md) for current setup and tests.
+
 # Customer booking, services and reviews
 
 Implemented 12/10/2026.

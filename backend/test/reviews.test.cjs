@@ -17,37 +17,33 @@ const actor = {
   tokenVersion: 1,
 };
 function fixture(overrides = {}) {
-  const appointment = {
-    id: "a",
-    customerId: actor.id,
-    branchId: "b",
-    staffId: "s",
-    status: "completed",
-    ...overrides,
-  };
-  const saved = [],
-    updates = [];
-  const manager = {
-    findOne: async (entity, options) =>
-      entity === User
-        ? actor
-        : entity === Credential
-          ? { tokenVersion: 1 }
-          : entity === Appointment
-            ? appointment
-            : saved.find((r) => r.target === options.where.target),
-    create: (_, value) => value,
-    insert: async (_, value) => saved.push(value),
-    update: async (_, id, value) => updates.push(value),
-  };
+  const { MemoryFirestore } = require("./support/firestore.cjs");
+  const db = new MemoryFirestore({
+    users: [actor],
+    auth_credentials: [{ userId: actor.id, tokenVersion: 1 }],
+    appointments: [
+      {
+        id: "a",
+        customerId: actor.id,
+        branchId: "b",
+        staffId: "s",
+        status: "completed",
+        ...overrides,
+      },
+    ],
+  });
   return {
-    service: new ReviewsService({
-      manager: { connection: { transaction: (work) => work(manager) } },
-    }),
-    saved,
-    updates,
+    service: new ReviewsService(db),
+    get saved() {
+      return db.state.reviews;
+    },
+    get updates() {
+      const a = db.state.appointments[0];
+      return a.isReviewed ? [{ isReviewed: true, rating: a.rating }] : [];
+    },
   };
 }
+
 test("review DTO rejects forged target/customer and invalid rating/comment", async () => {
   const valid = { target: "branch", rating: 5 };
   assert.equal(

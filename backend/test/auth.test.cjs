@@ -34,7 +34,7 @@ test("bcrypt and existing scrypt seed verification, byte limit and invalid hashe
   assert.throws(() => validateNewPassword("ab\0cd"));
 });
 test("UsersService enforces role and Branch without relying solely on controller guards", () => {
-  const service = new UsersService({ find: async () => [] });
+  const service = new UsersService({ read: async () => [] });
   assert.throws(
     () => service.findPendingStaff({ role: "manager", branchId: "a" }),
     { status: 403 },

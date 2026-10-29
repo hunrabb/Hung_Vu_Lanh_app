@@ -1,36 +1,46 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException,
 } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
 import { randomUUID } from "node:crypto";
 import { Actor } from "../auth/auth.decorators";
-import { branchScope, interval, lockCalendar } from "../common/calendar";
-import { requireRole, scopedMutation } from "../common/mutations";
-import { LeaveRequest } from "./leave-request.entity";
+import { interval } from "../common/calendar";
+import { FirestoreStore } from "../firestore/firestore.store";
+import {
+  branchScope,
+  get,
+  mutation,
+  overlaps,
+  requireRole,
+  sorted,
+  staff,
+} from "../firestore/rules";
 import { CreateLeaveDto, DecisionDto } from "./leave.dto";
 @Injectable()
 export class LeaveRequestsService {
-  constructor(
-    @InjectRepository(LeaveRequest)
-    private readonly requests: Repository<LeaveRequest>,
-  ) {}
+  constructor(private readonly db: FirestoreStore) {}
   list(actor: Actor) {
     requireRole(actor, ["manager", "superAdmin"]);
-    return this.requests.find({
-      where: actor.role === "manager" ? { branchId: actor.branchId! } : {},
-      order: { createdAt: "DESC", id: "ASC" },
-    });
+    return this.db.read(["staff_leave_requests"], (s) =>
+      sorted(
+        s.staff_leave_requests.filter(
+          (r) => actor.role === "superAdmin" || r.branchId === actor.branchId,
+        ),
+        "createdAt",
+        true,
+      ),
+    );
   }
   own(actor: Actor) {
     requireRole(actor, ["staff"]);
-    return this.requests.find({
-      where: { staffId: actor.id },
-      order: { createdAt: "DESC" },
-    });
+    return this.db.read(["staff_leave_requests"], (s) =>
+      sorted(
+        s.staff_leave_requests.filter((r) => r.staffId === actor.id),
+        "createdAt",
+        true,
+      ),
+    );
   }
   create(dto: CreateLeaveDto, actor: Actor) {
     requireRole(actor, ["staff"]);
@@ -38,71 +48,75 @@ export class LeaveRequestsService {
     const today =
       Math.floor((Date.now() + 7 * 3600000) / 86400000) * 86400000 -
       7 * 3600000;
-    if (times.startAt.getTime() < today || times.endAt.getTime() <= Date.now())
-      throw new BadRequestException("Leave must start today or later");
-    return scopedMutation(
-      this.requests,
+    if (
+      +times.startAt < today ||
+      +times.endAt <= Date.now() ||
+      !dto.reason.trim()
+    )
+      throw new BadRequestException(
+        "Leave must start today or later with a reason",
+      );
+    return mutation(
+      this.db,
+      ["branches", "staff_leave_requests"],
       actor,
       ["staff"],
-      async (manager, current) => {
-        const row = manager.create(LeaveRequest, {
+      (s, current) => {
+        staff(s, current.branchId, current.id);
+        if (
+          s.staff_leave_requests.some(
+            (r) =>
+              r.staffId === current.id &&
+              ["pending", "approved"].includes(r.status) &&
+              overlaps(r, times),
+          )
+        )
+          throw new ConflictException("Leave overlaps existing request");
+        const row = {
           id: randomUUID(),
           staffId: current.id,
           staffName: current.name,
-          branchId: current.branchId!,
-          leaveDate: new Date(times.startAt.getTime() + 7 * 3600000)
+          branchId: current.branchId,
+          leaveDate: new Date(+times.startAt + 7 * 3600000)
             .toISOString()
             .slice(0, 10),
           ...times,
           reason: dto.reason,
-          // Database default shares the clock used by the decision trigger.
+          createdAt: new Date(),
           status: "pending",
           reviewedBy: null,
           reviewedByName: null,
           reviewedBranchName: null,
           reviewedAt: null,
           note: "",
-        });
-        await manager.insert(LeaveRequest, row);
+        };
+        s.staff_leave_requests.push(row);
         return row;
-      },
-      async (manager) => {
-        await lockCalendar(manager, actor.branchId!, actor.id);
       },
     );
   }
   async decision(id: string, dto: DecisionDto, actor: Actor) {
-    requireRole(actor, ["manager", "superAdmin"]);
-    const before = await this.requests.findOneBy({ id });
-    if (!before) throw new NotFoundException("Leave request not found");
-    branchScope(actor, before.branchId);
-    return scopedMutation(
-      this.requests,
+    return mutation(
+      this.db,
+      ["branches", "staff_leave_requests"],
       actor,
       ["manager", "superAdmin"],
-      async (manager, current) => {
-        branchScope(
-          { ...current, tokenVersion: actor.tokenVersion },
-          before.branchId,
-        );
-        const row = await manager.findOne(LeaveRequest, {
-          where: { id },
-          lock: { mode: "pessimistic_write" },
-        });
-        if (!row) throw new NotFoundException();
+      (s, current) => {
+        const row = get(s, "staff_leave_requests", id);
+        branchScope(current as Actor, row.branchId);
         if (row.status !== "pending")
           throw new ConflictException("Decision is immutable");
-        if (row.staffId !== before.staffId || row.branchId !== before.branchId)
-          throw new ConflictException("Request identity changed");
-        await manager.update(
-          LeaveRequest,
-          { id },
-          { status: dto.status, reviewedBy: current.id, note: dto.note ?? "" },
-        );
-        return manager.findOneByOrFail(LeaveRequest, { id });
-      },
-      async (manager) => {
-        await lockCalendar(manager, before.branchId, before.staffId);
+        if (!["approved", "rejected"].includes(dto.status))
+          throw new BadRequestException("Decision required");
+        Object.assign(row, {
+          status: dto.status,
+          reviewedBy: current.id,
+          reviewedByName: current.name,
+          reviewedBranchName: get(s, "branches", row.branchId).name,
+          reviewedAt: new Date(),
+          note: dto.note ?? "",
+        });
+        return row;
       },
     );
   }
@@ -112,12 +126,14 @@ export class LeaveRequestsService {
     startAt: Date,
     endAt: Date,
   ) {
-    return this.requests
-      .createQueryBuilder("leave")
-      .where(
-        "leave.staff_id=:staffId AND leave.branch_id=:branchId AND leave.status=:status AND leave.start_at<:endAt AND leave.end_at>:startAt",
-        { staffId, branchId, status: "approved", startAt, endAt },
-      )
-      .getMany();
+    return this.db.read(["staff_leave_requests"], (s) =>
+      s.staff_leave_requests.filter(
+        (r) =>
+          r.staffId === staffId &&
+          r.branchId === branchId &&
+          r.status === "approved" &&
+          overlaps(r, { startAt, endAt }),
+      ),
+    );
   }
 }

@@ -1,3 +1,54 @@
+### Flutter default cache repair — 30/10/2026
+
+Normal Flutter launches regenerated package_config against the default global pub
+cache, which had package metadata but missing library files (device_info_plus and
+several desktop plugins). Restored all 66 exact-version package directories from
+the verified project-local cache into the default pub.dev cache, then ran normal
+flutter pub get without PUB_CACHE overrides. DeviceInfoPlugin resolves again and
+flutter analyze --no-pub is clean. No dependency versions or Dart source changed.
+Use the installed Flutter SDK from PATH; no PUB_CACHE workaround is now required.
+
+### PostgreSQL project cleanup — 30/10/2026
+
+Removed database/ SQL files, legacy SQL migration/seed/live-test scripts and their
+backend tests; removed the pg dependency. Backend package and runtime now require
+only Firestore. Extracted read-only checksum verification to
+backend/firestore-checksum.cjs with precision/tampering tests. Flutter opt-in live
+test cleanup now invokes a guarded Firestore helper instead of embedded SQL;
+unowned users or unexpected fixture appointments cause cleanup refusal.
+Current setup is in backend/README.md and backend/FIRESTORE_RUNTIME.md. Earlier
+migration notes below are historical snapshots; referenced old scripts were
+removed during this cleanup. Remote databases and existing Firestore documents
+were not deleted. The documented C:/flutter SDK path is absent; the installed SDK was found at
+D:/taixuong/flutter_windows_3.47.5-stable/flutter via PATH.
+
+### Firestore runtime replacement — 30/10/2026
+
+Backend source now uses NestJS/JWT -> Firestore in mobileapp-db88e/(default).
+AppModule and every feature service no longer open PostgreSQL connections;
+TypeORM/@nestjs/typeorm removed, backend entity classes now plain data types.
+The pg dependency and historical SQL scripts were subsequently removed.
+FirestoreStore maps the imported camelCase documents, embedded settings,
+specializations and appointment snapshots to unchanged API aliases. Money stays
+int64 in Firestore and decimal strings in JSON; unrelated writes patch only changed
+fields, preserving imported timestamp precision. JWT token versions and all role/
+branch/ownership guards are revalidated during atomic mutations.
+A shared _runtime/constraints write fence serializes email/booking/calendar and
+reference checks, including empty-query races. Current implementation scans relevant
+collections and paginates in memory: appropriate for this small coursework dataset,
+not large/high-throughput deployment; see backend/FIRESTORE_RUNTIME.md for limits.
+41 offline backend tests pass after replacing obsolete SQL-only assertions. Real
+Firestore integration passed HTTP login/JWT, int64, simultaneous booking/email,
+shift protection, leave decision history, reviews, approval, reports and revocation;
+all test documents were isolated under a fresh _test_runs UUID and cleaned up.
+Local ignored backend/.env references the user-provided key outside the repository
+and a generated JWT secret. No secret contents were copied into source. No Flutter
+source changes or remote Aiven deletion. Existing mock Flutter screens remain mock.
+The historical migration marker is unchanged; its backendCutover=false is the old
+import metadata, not an indicator of this local source implementation. There is no
+automatic replication of PostgreSQL writes after the 25/10 snapshot and no public
+hosting deployment in this change. Earlier PostgreSQL status below is historical.
+
 ### Firestore migration preparation — 25/10/2026
 
 NoSQL document import is now complete as a separate data-only step: a fresh Aiven

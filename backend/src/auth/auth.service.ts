@@ -1,18 +1,15 @@
-import {
+﻿import {
   BadRequestException,
-  ConflictException,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { DataSource, EntityManager } from "typeorm";
 import { randomUUID } from "node:crypto";
-import { User } from "../users/user.entity";
-import { Credential } from "./credential.entity";
+import { FirestoreStore, Row } from "../firestore/firestore.store";
+import { authorize, emailUnique, mutation } from "../firestore/rules";
 import { Actor } from "./auth.decorators";
 import { LoginDto, RegisterDto, PasswordDto, ProfileDto } from "./auth.dto";
 import { hashPassword, validateNewPassword, verifyPassword } from "./passwords";
-
 export interface Claims {
   sub: string;
   ver: number;
@@ -22,204 +19,178 @@ export interface Claims {
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly db: DataSource,
+    private readonly db: FirestoreStore,
     private readonly jwt: JwtService,
   ) {}
-  profile(user: User) {
+  profile(user: Row) {
+    const {
+      id,
+      email,
+      name,
+      role,
+      branchId,
+      phone,
+      address,
+      isApproved,
+      createdAt,
+    } = user;
     return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      branchId: user.branchId,
-      phone: user.phone,
-      address: user.address,
-      isApproved: user.isApproved,
-      createdAt: user.createdAt,
+      id,
+      email,
+      name,
+      role,
+      branchId,
+      phone,
+      address,
+      isApproved,
+      createdAt,
     };
   }
-  async updateProfile(actor: Actor, dto: ProfileDto) {
+  updateProfile(actor: Actor, dto: ProfileDto) {
     if (!dto.name.trim()) throw new BadRequestException("Name is required");
-    try {
-      return await this.db.transaction(async (manager) => {
-        const user = await this.lockUser(manager, actor.id);
-        const credential = await this.lockCredential(manager, actor.id);
-        this.assertActor(actor, user, credential);
-        const changes = { name: dto.name.trim(), email: dto.email.trim().toLowerCase(),
-          phone: dto.phone.trim(), address: dto.address.trim() };
-        await manager.update(User, { id: actor.id }, changes);
-        return this.profile({ ...user, ...changes });
-      });
-    } catch (error) {
-      if ((error as { code?: string }).code === "23505")
-        throw new ConflictException("Email đã được sử dụng.");
-      throw error;
-    }
+    return mutation(
+      this.db,
+      [],
+      actor,
+      ["customer", "staff", "manager", "superAdmin"],
+      (s, user) => {
+        emailUnique(s, dto.email, user.id);
+        Object.assign(user, {
+          name: dto.name.trim(),
+          email: dto.email.trim().toLowerCase(),
+          phone: dto.phone.trim(),
+          address: dto.address.trim(),
+        });
+        return this.profile(user);
+      },
+    );
   }
   async register(dto: RegisterDto) {
     validateNewPassword(dto.password);
     if (!dto.name.trim()) throw new BadRequestException("Name is required");
-    const hash = await hashPassword(dto.password);
-    try {
-      const user = await this.db.transaction(async (manager) => {
-        const user = manager.create(User, {
-          id: randomUUID(),
-          name: dto.name.trim(),
-          email: dto.email.trim().toLowerCase(),
-          role: "customer",
-          branchId: null,
-          phone: null,
-          isApproved: true,
-          createdAt: new Date(),
-        });
-        await manager.insert(User, user);
-        await manager.insert(Credential, {
-          userId: user.id,
-          passwordHash: hash,
-          tokenVersion: 0,
-        });
-        return user;
-      });
-      return {
-        accessToken: await this.token(user, 0),
-        user: this.profile(user),
+    const passwordHash = await hashPassword(dto.password);
+    const user = await this.db.mutate([], (s) => {
+      emailUnique(s, dto.email);
+      const user = {
+        id: randomUUID(),
+        name: dto.name.trim(),
+        email: dto.email.trim().toLowerCase(),
+        role: "customer",
+        branchId: null,
+        phone: null,
+        address: null,
+        isApproved: true,
+        specializedCategoryIds: [],
+        createdAt: new Date(),
       };
-    } catch (error) {
-      if ((error as { code?: string }).code === "23505")
-        throw new ConflictException("Email already registered");
-      throw error;
-    }
+      s.users.push(user);
+      s.auth_credentials.push({
+        userId: user.id,
+        passwordHash,
+        tokenVersion: 0,
+      });
+      return user;
+    });
+    return { accessToken: await this.token(user, 0), user: this.profile(user) };
   }
   async login(dto: LoginDto) {
-    const user = await this.db
-      .getRepository(User)
-      .findOneBy({ email: dto.email.trim().toLowerCase() });
-    if (!user || !user.isApproved)
-      throw new UnauthorizedException("Invalid email or password");
-    const credential = await this.db.getRepository(Credential).findOne({
-      where: { userId: user.id },
-      select: { userId: true, passwordHash: true, tokenVersion: true },
+    const prior = await this.db.read(["users", "auth_credentials"], (s) => {
+      const user = s.users.find(
+        (u) => u.email === dto.email.trim().toLowerCase(),
+      );
+      return {
+        user,
+        credential: s.auth_credentials.find((c) => c.userId === user?.id),
+      };
     });
     if (
-      !credential ||
-      !(await verifyPassword(dto.password, credential.passwordHash))
+      !prior.user?.isApproved ||
+      !prior.credential ||
+      !(await verifyPassword(dto.password, prior.credential.passwordHash))
     )
       throw new UnauthorizedException("Invalid email or password");
-    let hash = credential.passwordHash;
+    let hash = prior.credential.passwordHash;
     if (hash.startsWith("$scrypt$")) {
-      // Never truncate a legacy password during bcrypt migration.
       validateNewPassword(dto.password);
       hash = await hashPassword(dto.password);
     }
-    return this.db.transaction(async (manager) => {
-      const current = await this.lockUser(manager, user.id);
-      const stored = await this.lockCredential(manager, user.id);
+    const result = await this.db.mutate([], (s) => {
+      const user = s.users.find((u) => u.id === prior.user!.id),
+        credential = s.auth_credentials.find((c) => c.userId === user?.id);
       if (
-        !current.isApproved ||
-        stored.passwordHash !== credential.passwordHash ||
-        stored.tokenVersion !== credential.tokenVersion
+        !user?.isApproved ||
+        !credential ||
+        credential.passwordHash !== prior.credential!.passwordHash ||
+        credential.tokenVersion !== prior.credential!.tokenVersion
       )
         throw new UnauthorizedException("Account changed; sign in again");
-      if (hash !== stored.passwordHash)
-        await manager.update(
-          Credential,
-          { userId: user.id },
-          { passwordHash: hash },
-        );
-      return {
-        accessToken: await this.token(current, stored.tokenVersion),
-        user: this.profile(current),
-      };
+      credential.passwordHash = hash;
+      return { user, version: credential.tokenVersion };
     });
+    return {
+      accessToken: await this.token(result.user, result.version),
+      user: this.profile(result.user),
+    };
   }
   async validateToken(payload: Claims): Promise<Actor> {
     if (typeof payload.sub !== "string" || !Number.isInteger(payload.ver))
       throw new UnauthorizedException();
-    const row = await this.db
-      .getRepository(User)
-      .createQueryBuilder("u")
-      .innerJoin(Credential, "c", "c.userId=u.id")
-      .where("u.id=:id", { id: payload.sub })
-      .andWhere("u.isApproved=TRUE")
-      .andWhere("c.tokenVersion=:version", { version: payload.ver })
-      .getOne();
-    if (!row || row.role !== payload.role || row.branchId !== payload.branchId)
-      throw new UnauthorizedException("Token revoked or account changed");
-    return { ...row, tokenVersion: payload.ver };
+    return this.db.read(["users", "auth_credentials"], (s) => {
+      const actor = {
+        id: payload.sub,
+        role: payload.role,
+        branchId: payload.branchId,
+        tokenVersion: payload.ver,
+      } as Actor;
+      return {
+        ...authorize(s, actor, ["customer", "staff", "manager", "superAdmin"]),
+        tokenVersion: payload.ver,
+      } as Actor;
+    });
   }
   async password(actor: Actor, dto: PasswordDto) {
     validateNewPassword(dto.newPassword);
     if (dto.oldPassword === dto.newPassword)
       throw new BadRequestException("New password must be different");
-    const stored = await this.db.getRepository(Credential).findOne({
-      where: { userId: actor.id },
-      select: { userId: true, passwordHash: true, tokenVersion: true },
-    });
-    if (
-      !stored ||
-      !(await verifyPassword(dto.oldPassword, stored.passwordHash))
-    )
+    const prior = await this.db.read(["auth_credentials"], (s) =>
+      s.auth_credentials.find((c) => c.userId === actor.id),
+    );
+    if (!prior || !(await verifyPassword(dto.oldPassword, prior.passwordHash)))
       throw new UnauthorizedException("Incorrect current password");
     const hash = await hashPassword(dto.newPassword);
-    await this.db.transaction(async (manager) => {
-      const current = await this.lockUser(manager, actor.id);
-      const locked = await this.lockCredential(manager, actor.id);
-      this.assertActor(actor, current, locked);
-      if (locked.passwordHash !== stored.passwordHash)
-        throw new UnauthorizedException("Credential changed");
-      await manager.update(
-        Credential,
-        { userId: actor.id },
-        { passwordHash: hash, tokenVersion: locked.tokenVersion + 1 },
-      );
-    });
+    await mutation(
+      this.db,
+      [],
+      actor,
+      ["customer", "staff", "manager", "superAdmin"],
+      (s) => {
+        const c = s.auth_credentials.find((c) => c.userId === actor.id)!;
+        if (c.passwordHash !== prior.passwordHash)
+          throw new UnauthorizedException("Credential changed");
+        c.passwordHash = hash;
+        c.tokenVersion++;
+      },
+    );
     return { message: "Password updated. Sign in again." };
   }
   async logout(actor: Actor) {
-    await this.db.transaction(async (manager) => {
-      const current = await this.lockUser(manager, actor.id);
-      const credential = await this.lockCredential(manager, actor.id);
-      this.assertActor(actor, current, credential);
-      await manager.update(
-        Credential,
-        { userId: actor.id },
-        { tokenVersion: credential.tokenVersion + 1 },
-      );
-    });
+    await mutation(
+      this.db,
+      [],
+      actor,
+      ["customer", "staff", "manager", "superAdmin"],
+      (s) => {
+        s.auth_credentials.find((c) => c.userId === actor.id)!.tokenVersion++;
+      },
+    );
     return { message: "All tokens revoked" };
   }
-  private token(user: User, version: number) {
+  private token(user: Row, ver: number) {
     return this.jwt.signAsync({
       sub: user.id,
       role: user.role,
       branchId: user.branchId,
-      ver: version,
+      ver,
     });
-  }
-  private async lockUser(manager: EntityManager, id: string) {
-    const user = await manager.findOne(User, {
-      where: { id },
-      lock: { mode: "pessimistic_write" },
-    });
-    if (!user) throw new UnauthorizedException();
-    return user;
-  }
-  private async lockCredential(manager: EntityManager, id: string) {
-    const credential = await manager.findOne(Credential, {
-      where: { userId: id },
-      select: { userId: true, passwordHash: true, tokenVersion: true },
-      lock: { mode: "pessimistic_write" },
-    });
-    if (!credential) throw new UnauthorizedException();
-    return credential;
-  }
-  private assertActor(actor: Actor, user: User, credential: Credential) {
-    if (
-      !user.isApproved ||
-      user.role !== actor.role ||
-      user.branchId !== actor.branchId ||
-      credential.tokenVersion !== actor.tokenVersion
-    )
-      throw new UnauthorizedException("Token revoked");
   }
 }

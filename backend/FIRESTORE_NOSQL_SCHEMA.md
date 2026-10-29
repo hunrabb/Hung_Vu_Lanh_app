@@ -64,37 +64,16 @@ Credentials are a private collection, not embedded in public profiles. Original
 hashes and token versions are retained; no plaintext password is generated or
 logged. Client rules currently deny all access; NestJS Admin SDK will use IAM.
 
-## Migration tooling
+## Runtime and verification
 
-From backend/:
+NestJS reads and writes these collections through Firebase Admin SDK. Credentials
+remain private; Flutter calls the NestJS API and retains JWT authentication.
+Email/reference checks, atomic staff approval, booking/calendar serialization,
+review uniqueness, state transitions and token revocation run in backend
+transactions. See [FIRESTORE_RUNTIME.md](FIRESTORE_RUNTIME.md).
 
-* `node migrate-nosql.cjs` validates/transforms a consistent read-only source
-  snapshot and prints counts; it makes no Firestore connection.
-* `node migrate-nosql.cjs --write` requires explicit FIREBASE_PROJECT_ID,
-  FIRESTORE_DATABASE_ID and Application Default Credentials. It checks deny-all
-  client rules, rejects nonempty target collections, and creates every document
-  plus the migration marker in one atomic batch. It supports up to 450 target
-  documents; larger datasets must use a different import strategy.
-* `node migrate-nosql.cjs --verify` independently reads every target collection
-  and compares document IDs, counts and canonical SHA-256 content checksums
-  against the committed manifest. It updates the verification timestamp/status.
-
-Writes use create preconditions and a fixed migration marker. Rerunning --write
-will fail rather than overwrite operational data. If the batch committed but
-read-back was interrupted, use --verify. SQL timestamp/date arrays are read as
-text arrays, avoiding local timezone conversions by the pg default parser.
-
-## Runtime status
-
-This completes data reshaping/import only. NestJS still uses PostgreSQL/TypeORM;
-Flutter has not been changed. Further Aiven writes are not replicated into these
-documents. A final synchronized snapshot is required when cutting over.
-
-Before enabling Firestore runtime, implement and test all feature adapters,
-role/branch/ownership checks, JWT token revocation, email/manager uniqueness,
-atomic staff approval, state transitions, reference checks and booking/leave/shift
-serialization. SQL triggers, foreign keys and exclusion constraints do not execute
-in Firestore. Define/deploy composite indexes to match the actual adapter queries,
-including appointments by role scope/status/startAt, shifts/leave by staff/branch
-and time, and reviews by target/time. Do not change runtime configuration merely
-because the import is verified.
+The old import tools and SQL source files have been removed. The historical
+`_migrations/aiven-nosql-v1` manifest remains on Firestore for optional read-only
+checksum comparison using `node verify-firestore-runtime.cjs`. Its old
+`backendCutover` field describes the original import, not current runtime health.
+No existing Firestore data was deleted during source cleanup.

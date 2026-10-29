@@ -1,3 +1,11 @@
+Firestore runtime update 30/10/2026: backend now reads/writes Firestore through
+NestJS/JWT, preserving the existing Flutter API contracts. SQL-only constraints are
+replaced by transactional application checks and a shared write fence. Money is
+native int64 in storage and strings in API JSON. Relevant collections are scanned
+for this small dataset; see ../backend/FIRESTORE_RUNTIME.md for scale limits and
+validation. Historical PostgreSQL implementation notes below describe the previous
+backend. Flutter mock screens remain unchanged; no public server deployment yet.
+
 # PRODUCT REQUIREMENTS DOCUMENT (PRD) - CHAIN MANAGEMENT BARBERSHOP/SPA
 
 Customer update 12/10/2026: Home must retain and show a newly booked appointment
@@ -6,7 +14,7 @@ calendar. Customer catalog pages show price, duration, illustrative process and
 samples, with booking preselection. Each branch has its own Manager (one per
 branch); Manager cannot operate another branch. Customers can independently rate
 the branch and assigned staff, once per target per owned completed appointment,
-with 1–5 stars and an optional comment. API reviews persist in PostgreSQL; mock
+with 1–5 stars and an optional comment. API reviews persist in Firestore; mock
 reviews are RAM only. Details and deployment: ../CUSTOMER_FEATURES.md.
 
 **Cập nhật định hướng: 07/10/2026.** Sản phẩm chuyển từ đặt lịch một cửa hàng
@@ -21,8 +29,8 @@ Boss: tổng quan chuỗi, sổ lịch, hoa hồng tạm tính, Branch/catalog C
 từ chối Staff. Hoa hồng mặc định 30% có thể chỉnh trong UI, chưa lưu hoặc chi trả.
 Không tích hợp Zalo hoặc backend ở đợt này.
 
-Backend mới tại `backend/` dùng NestJS, TypeORM, pg và @nestjs/config; có
-GET /api/branches, TLS Aiven với CA/rejectUnauthorized=true và synchronize=false.
+Backend tại `backend/` dùng NestJS, Firebase Admin SDK và @nestjs/config; có
+GET /api/branches và đọc/ghi Cloud Firestore qua thông tin xác thực ở server.
 Flutter đã nối Auth/Boss onboarding (Phần1), ca làm/nghỉ phép (Phần2), Booking và
 Appointments API (Phần3 Giai đoạn6), với slots server/409/actions/phân trang;
 Dashboard/Reports Manager/Boss và earnings/profile-stats Staff đã nối Phần4,
@@ -33,7 +41,7 @@ onboarding/CRUD, ca làm/nghỉ phép, AppointmentsModule và ReportsModule theo
 BACKEND_ROADMAP.md. Báo cáo completed-only theo ngày Hà Nội, tiền dạng string;
 không lưu bảng doanh thu/hoa hồng và không nhân đôi tổng khi lịch có nhiều dịch vụ.
 Booking kiểm tra ca thực tế, nghỉ approved, chuyên môn và cấu hình cơ sở; transaction
-khóa Staff và dùng EXCLUDE PostgreSQL chống double-booking. Không bật synchronize.
+Firestore kiểm tra xung đột và tuần tự hóa các lần ghi để chống double-booking.
 
 Manager Dashboard chỉ giữ Doanh thu hôm nay, Lịch hôm nay, Lịch đã hủy.
 “Báo cáo Doanh số” riêng theo cơ sở có tổng Hôm nay/Tháng này, giao dịch completed

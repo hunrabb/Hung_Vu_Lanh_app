@@ -1,12 +1,9 @@
-import { Column, Entity, PrimaryColumn } from "typeorm";
-
-@Entity({ name: "services", schema: "public" })
 export class Service {
-  @PrimaryColumn({ type: "text" }) id!: string;
-  @Column({ name: "category_id", type: "text" }) categoryId!: string;
-  @Column({ type: "text" }) name!: string;
-  // PostgreSQL BIGINT is returned as a string to preserve money exactly.
-  @Column({ name: "price_vnd", type: "bigint" }) price!: string;
-  @Column({ name: "duration_minutes", type: "integer" }) duration!: number;
-  @Column({ name: "is_active", type: "boolean" }) isActive!: boolean;
+  id!: string;
+  categoryId!: string;
+  name!: string;
+  // The API exposes integer VND as a string to preserve exact values.
+  price!: string;
+  duration!: number;
+  isActive!: boolean;
 }

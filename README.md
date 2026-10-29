@@ -21,7 +21,7 @@
 ### 🔐 Xác thực và phân quyền đa tầng
 
 - Bốn vai trò: **Boss**, **Manager**, **Staff** và **Customer**.
-- JWT được kiểm tra cùng trạng thái tài khoản, vai trò, chi nhánh và `token_version` trong cơ sở dữ liệu.
+- JWT được kiểm tra cùng trạng thái tài khoản, vai trò, chi nhánh và `tokenVersion` trong cơ sở dữ liệu.
 - Manager chỉ được truy cập dữ liệu thuộc chi nhánh mình quản lý; Boss có phạm vi toàn chuỗi.
 - Staff mới do Manager tạo phải được Boss duyệt và cấp mật khẩu trước khi đăng nhập.
 
@@ -30,7 +30,7 @@
 - Customer chọn chi nhánh, dịch vụ, thợ phù hợp chuyên môn, ngày và khung giờ trống.
 - Slot được tính từ giờ mở cửa, ca làm việc, ngày nghỉ, đơn nghỉ phép và các lịch hiện có.
 - Tự động ẩn giờ trong quá khứ và chỉ cho phép dịch vụ nằm trọn trong một ca làm việc.
-- Chống đặt trùng bằng transaction, khóa dòng Staff và ràng buộc loại trừ tại PostgreSQL.
+- Chống đặt trùng bằng transaction Firestore và kiểm tra xung đột tại backend.
 - Hỗ trợ lịch khách hàng và lịch **Walk-in** do Manager tạo tại cửa hàng.
 
 ### 📊 Dashboard và báo cáo
@@ -73,9 +73,9 @@
 
 - **NestJS** và **TypeScript**
 - RESTful API với JWT, Passport và bcrypt
-- **TypeORM** kết nối **PostgreSQL trên Aiven** qua TLS
-- Transaction, row-level lock và PostgreSQL exclusion constraint để chống double-booking
-- `synchronize: false`; schema được quản lý bằng SQL trong `database/`
+- **Cloud Firestore** qua Firebase Admin SDK
+- Transaction và kiểm tra quyền/xung đột tại server
+- Schema document: `backend/FIRESTORE_NOSQL_SCHEMA.md`
 
 ## 🗂 Cấu trúc dự án
 
@@ -89,7 +89,6 @@
 ├── backend/                # NestJS RESTful API
 │   ├── src/                # Modules, controllers, services, entities
 │   └── test/               # Backend tests
-├── database/               # DDL, migration và seed PostgreSQL
 ├── .vscode/launch.example.json
 └── pubspec.yaml
 ```
@@ -99,8 +98,8 @@
 - Flutter SDK tương thích Dart `^3.13.1`
 - Android Studio hoặc VS Code có Flutter/Dart extensions
 - Node.js `>= 22.12.0`
-- PostgreSQL/Aiven đã được tạo schema từ các script trong `database/`
-- File CA của Aiven để tại `backend/ca.pem`
+- Firebase project có Cloud Firestore
+- Quyền truy cập backend qua Google ADC hoặc service account ngoài repository
 
 Kiểm tra môi trường Flutter:
 
@@ -136,23 +135,15 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-Cập nhật `backend/.env` bằng thông tin PostgreSQL của môi trường cá nhân:
+Cập nhật `backend/.env` theo Firebase project và thông tin xác thực của máy bạn:
 
 ```dotenv
-DB_HOST=your-service.aivencloud.com
-DB_PORT=5432
-DB_NAME=defaultdb
-DB_USER=your_api_database_user
-DB_PASSWORD=your_database_password
+FIREBASE_PROJECT_ID=mobileapp-db88e
+FIRESTORE_DATABASE_ID=(default)
+GOOGLE_APPLICATION_CREDENTIALS=C:/path/outside/repository/service-account.json
 PORT=3000
 JWT_SECRET=replace_with_a_random_secret_of_at_least_32_characters
 JWT_TTL_SECONDS=1800
-```
-
-Tải CA certificate từ Aiven, lưu đúng đường dẫn:
-
-```text
-backend/ca.pem
 ```
 
 Khởi chạy API ở chế độ phát triển:
@@ -167,7 +158,7 @@ Kiểm tra API:
 GET http://localhost:3000/api/branches
 ```
 
-> Backend bắt buộc xác minh TLS bằng `ca.pem` và không tự động thay đổi schema PostgreSQL.
+> Xem [hướng dẫn Firestore](backend/FIRESTORE_RUNTIME.md) để cấu hình, kiểm thử và triển khai.
 
 ### Bước 3 — Cài đặt Frontend Flutter
 
@@ -238,7 +229,7 @@ cd backend
 npm test
 ```
 
-Các live test kết nối Aiven chỉ nên chạy khi `.env`, `ca.pem` và dữ liệu test đã được cấu hình đúng. Xem thêm tài liệu `backend/PHASE*_TESTING.md`.
+Live test Firestore: `npm run test:firestore:live` trong `backend/`. Test tạo namespace riêng và dọn dữ liệu sau khi chạy.
 
 ## 🤝 Quy trình làm việc nhóm
 
@@ -284,10 +275,10 @@ Tạo Pull Request vào `main`, mô tả thay đổi, kết quả test và ảnh
 
 ## 🔒 Quy tắc bảo mật
 
-- Không commit `.env`, `backend/ca.pem`, JWT secret, mật khẩu database hoặc signing keys.
+- Không commit `.env`, service account JSON, JWT secret hoặc signing keys.
 - Không sửa `.gitignore` để đưa credential lên repository.
 - Dùng `.env.example` và `.vscode/launch.example.json` làm template.
-- Không kết nối Flutter trực tiếp tới PostgreSQL; mọi truy cập dữ liệu phải qua NestJS API.
+- Flutter truy cập dữ liệu qua NestJS API; Firebase Admin credentials chỉ ở backend.
 - Nếu credential từng bị push, phải thu hồi/đổi ngay; xóa file khỏi commit mới không xóa bí mật khỏi lịch sử Git.
 
 ---

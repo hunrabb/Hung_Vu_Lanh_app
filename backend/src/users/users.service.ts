@@ -1,200 +1,145 @@
-import {
-  Injectable,
-  ForbiddenException,
-  NotFoundException,
+﻿import {
   ConflictException,
-  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
 } from "@nestjs/common";
-import { Actor } from "../auth/auth.decorators";
-import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
-import { User } from "./user.entity";
 import { randomUUID } from "node:crypto";
-import { Credential } from "../auth/credential.entity";
+import { Actor } from "../auth/auth.decorators";
+import { FirestoreStore } from "../firestore/firestore.store";
+import {
+  branchScope,
+  emailUnique,
+  fields,
+  get,
+  mutation,
+  requireRole,
+  sorted,
+} from "../firestore/rules";
 import { hashPassword, validateNewPassword } from "../auth/passwords";
-import { requireRole, scopedMutation } from "../common/mutations";
 import { CreateStaffDto, UpdateStaffDto } from "./staff.dto";
-import { StaffSpecialization } from "./staff-specialization.entity";
-import { defined } from "../common/catalog-crud";
-
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(User) private readonly users: Repository<User>,
-  ) {}
-
-  createStaff(dto: CreateStaffDto, actor: Actor) {
-    return scopedMutation(
-      this.users,
+  constructor(private readonly db: FirestoreStore) {}
+  async createStaff(dto: CreateStaffDto, actor: Actor) {
+    return mutation(
+      this.db,
+      ["branches", "categories"],
       actor,
       ["manager"],
-      async (manager, current) => {
+      (s, current) => {
         if (!current.branchId) throw new ForbiddenException();
-        const staff = manager.create(User, {
+        get(s, "branches", current.branchId);
+        emailUnique(s, dto.email);
+        dto.specializedCategoryIds.forEach((id) => get(s, "categories", id));
+        const row = {
           id: randomUUID(),
-          name: dto.name,
-          email: dto.email,
-          phone: dto.phone,
-          address: dto.address,
+          ...dto,
+          email: dto.email.trim().toLowerCase(),
+          specializedCategoryIds: [...dto.specializedCategoryIds].sort(),
           role: "staff",
           isApproved: false,
           branchId: current.branchId,
           createdAt: new Date(),
-        });
-        await manager.insert(User, staff);
-        await manager.insert(
-          StaffSpecialization,
-          dto.specializedCategoryIds.map((categoryId) => ({
-            staffId: staff.id,
-            categoryId,
-          })),
-        );
-        return { ...staff, specializedCategoryIds: dto.specializedCategoryIds };
+        };
+        s.users.push(row);
+        return { ...row };
       },
     );
   }
-
   updateStaff(id: string, dto: UpdateStaffDto, actor: Actor) {
-    const update = defined(dto);
-    if (Object.keys(update).length === 0)
-      throw new BadRequestException("Empty update");
-    return scopedMutation(
-      this.users,
+    const changes = fields(dto);
+    return mutation(
+      this.db,
+      ["categories"],
       actor,
       ["manager"],
-      async (manager, current) => {
-        const staff = await manager.findOne(User, {
-          where: { id },
-          lock: { mode: "pessimistic_write" },
-        });
-        if (!staff || staff.role !== "staff")
+      (s, current) => {
+        const row = get(s, "users", id);
+        if (row.role !== "staff")
           throw new NotFoundException("Staff not found");
-        if (staff.branchId !== current.branchId)
-          throw new ForbiddenException("Branch access denied");
-        const { specializedCategoryIds, ...fields } = update;
-        Object.assign(staff, fields);
-        await manager.save(User, staff);
-        if (specializedCategoryIds !== undefined) {
-          await manager.delete(StaffSpecialization, { staffId: id });
-          await manager.insert(
-            StaffSpecialization,
-            specializedCategoryIds.map((categoryId) => ({
-              staffId: id,
-              categoryId,
-            })),
-          );
+        branchScope(current as Actor, row.branchId);
+        if (changes.email) {
+          emailUnique(s, changes.email, id);
+          changes.email = changes.email.trim().toLowerCase();
         }
-        const links = await manager.findBy(StaffSpecialization, {
-          staffId: id,
-        });
-        return {
-          ...staff,
-          specializedCategoryIds: links.map((s) => s.categoryId).sort(),
-        };
+        if (changes.specializedCategoryIds)
+          changes.specializedCategoryIds.forEach((id: string) =>
+            get(s, "categories", id),
+          );
+        Object.assign(row, changes);
+        row.specializedCategoryIds = [...row.specializedCategoryIds].sort();
+        return { ...row };
       },
     );
   }
-
   async approve(id: string, password: string, actor: Actor) {
     requireRole(actor, ["superAdmin"]);
     validateNewPassword(password);
     const hash = await hashPassword(password);
-    return scopedMutation(
-      this.users,
-      actor,
-      ["superAdmin"],
-      async (manager) => {
-        const staff = await manager.findOne(User, {
-          where: { id },
-          lock: { mode: "pessimistic_write" },
-        });
-        if (!staff || staff.role !== "staff")
-          throw new NotFoundException("Staff not found");
-        if (
-          staff.isApproved ||
-          (await manager.existsBy(Credential, { userId: id }))
-        )
-          throw new ConflictException(
-            "Staff is not pending or already has credentials",
-          );
-        await manager.insert(Credential, {
-          userId: id,
-          passwordHash: hash,
-          tokenVersion: 0,
-        });
-        await manager.update(User, { id }, { isApproved: true });
-        return { ...staff, isApproved: true };
-      },
-    );
+    return mutation(this.db, [], actor, ["superAdmin"], (s) => {
+      const row = get(s, "users", id);
+      if (row.role !== "staff") throw new NotFoundException("Staff not found");
+      if (row.isApproved || s.auth_credentials.some((c) => c.userId === id))
+        throw new ConflictException(
+          "Staff is not pending or already has credentials",
+        );
+      s.auth_credentials.push({
+        userId: id,
+        passwordHash: hash,
+        tokenVersion: 0,
+      });
+      row.isApproved = true;
+      return { ...row };
+    });
   }
-
   rejectPending(id: string, actor: Actor) {
-    return scopedMutation(
-      this.users,
+    return mutation(
+      this.db,
+      ["appointments", "staff_shifts", "staff_leave_requests"],
       actor,
       ["superAdmin"],
-      async (manager) => {
-        const staff = await manager.findOne(User, {
-          where: { id },
-          lock: { mode: "pessimistic_write" },
-        });
-        if (!staff || staff.role !== "staff")
-          throw new NotFoundException("Staff not found");
+      (s) => {
+        const row = get(s, "users", id);
         if (
-          staff.isApproved ||
-          (await manager.existsBy(Credential, { userId: id }))
+          row.role !== "staff" ||
+          row.isApproved ||
+          s.auth_credentials.some((c) => c.userId === id)
         )
           throw new ConflictException(
             "Only pending Staff without credentials may be rejected",
           );
-        const rows = await manager.query(
-          "SELECT EXISTS(SELECT 1 FROM appointments WHERE staff_id=$1) OR EXISTS(SELECT 1 FROM staff_shifts WHERE staff_id=$1) OR EXISTS(SELECT 1 FROM staff_leave_requests WHERE staff_id=$1) AS referenced",
-          [id],
-        );
-        if (rows[0].referenced)
+        if (
+          [
+            ...s.appointments,
+            ...s.staff_shifts,
+            ...s.staff_leave_requests,
+          ].some((r) => r.staffId === id)
+        )
           throw new ConflictException(
             "Staff has appointments, shifts or leave history",
           );
-        await manager.delete(User, { id });
+        s.users = s.users.filter((u) => u.id !== id);
         return { message: "Pending profile deleted" };
       },
     );
   }
-
-  private async withSpecialties(rows: User[]) {
-    if (!rows.length) return [];
-    const links = await this.users.manager.findBy(StaffSpecialization, {
-      staffId: In(rows.map((row) => row.id)),
-    });
-    const grouped = new Map<string, string[]>();
-    for (const link of links) {
-      const ids = grouped.get(link.staffId) ?? [];
-      ids.push(link.categoryId);
-      grouped.set(link.staffId, ids);
-    }
-    return rows.map((row) => ({
-      ...row,
-      specializedCategoryIds: (grouped.get(row.id) ?? []).sort(),
-    }));
+  findPendingStaff(actor: Actor) {
+    requireRole(actor, ["superAdmin"]);
+    return this.db.read(["users"], (s) =>
+      sorted(
+        s.users.filter((u) => u.role === "staff" && !u.isApproved),
+        "createdAt",
+      ),
+    );
   }
-
-  findPendingStaff(actor: Actor): Promise<User[]> {
-    if (actor?.role !== "superAdmin") throw new ForbiddenException();
-    return this.users.find({
-      where: { role: "staff", isApproved: false },
-      order: { createdAt: "ASC", id: "ASC" },
-    }).then((rows) => this.withSpecialties(rows));
-  }
-
-  findStaffByBranch(branchId: string, actor: Actor): Promise<User[]> {
-    if (
-      actor?.role !== "superAdmin" &&
-      !(actor?.role === "manager" && actor.branchId === branchId)
-    )
-      throw new ForbiddenException("Branch access denied");
-    return this.users.find({
-      where: { role: "staff", branchId },
-      order: { name: "ASC", id: "ASC" },
-    }).then((rows) => this.withSpecialties(rows));
+  findStaffByBranch(id: string, actor: Actor) {
+    branchScope(actor, id);
+    return this.db.read(["users"], (s) =>
+      sorted(
+        s.users.filter((u) => u.role === "staff" && u.branchId === id),
+        "name",
+      ),
+    );
   }
 }

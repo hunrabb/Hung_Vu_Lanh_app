@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -48,7 +48,7 @@ export class BranchesController {
 
   @Get()
   @Public()
-  findAll(): Promise<Branch[]> {
+  findAll() {
     return this.branches.findAll();
   }
 }

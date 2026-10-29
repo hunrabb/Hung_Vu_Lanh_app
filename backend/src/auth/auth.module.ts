@@ -3,9 +3,6 @@ import { APP_GUARD } from "@nestjs/core";
 import { PassportModule } from "@nestjs/passport";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { User } from "../users/user.entity";
-import { Credential } from "./credential.entity";
 import { AuthService } from "./auth.service";
 import { AuthController } from "./auth.controller";
 import { JwtStrategy } from "./jwt.strategy";
@@ -15,7 +12,6 @@ import { LoginRateGuard } from "./login-rate.guard";
 @Module({
   imports: [
     PassportModule,
-    TypeOrmModule.forFeature([User, Credential]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

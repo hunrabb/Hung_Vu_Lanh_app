@@ -333,12 +333,7 @@ void main() {
         api.close();
         if (fixtureId != null) {
           final cleanup = await Process.run('node', [
-            '-e',
-            r'''
-require('dotenv/config');const fs=require('node:fs');const {Client}=require('pg');
-const c=new Client({host:process.env.DB_HOST,port:Number(process.env.DB_PORT),database:process.env.DB_NAME,user:process.env.DB_USER,password:process.env.DB_PASSWORD,ssl:{rejectUnauthorized:true,ca:fs.readFileSync('./ca.pem','utf8')}});
-(async()=>{try{await c.connect();await c.query('BEGIN');const owned=await c.query("SELECT id FROM users WHERE id=$1 AND name='Phase6 Flutter fixture' AND email LIKE 'phase6-%@example.com'",[process.argv[1]]);if(owned.rows.length){await c.query('DELETE FROM appointments WHERE id=ANY($1::text[]) AND staff_id=$2',[JSON.parse(process.argv[2]),process.argv[1]]);await c.query('DELETE FROM staff_leave_requests WHERE staff_id=$1',[process.argv[1]]);await c.query('DELETE FROM staff_shifts WHERE staff_id=$1',[process.argv[1]]);}await c.query("DELETE FROM users WHERE id=$1 AND name='Phase6 Flutter fixture' AND email LIKE 'phase6-%@example.com'",[process.argv[1]]);await c.query('COMMIT');}catch(e){await c.query('ROLLBACK').catch(()=>{});console.error(e.code||'cleanup failed');process.exitCode=1;}finally{await c.end();}})();
-''',
+            'cleanup-flutter-fixture.cjs',
             fixtureId,
             jsonEncode(appointmentIds),
           ], workingDirectory: 'backend');
