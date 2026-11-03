@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../auth/application/auth_controller.dart';
-import '../../reports/presentation/api_report_screen.dart';
 
 import '../../../core/models/appointment.dart';
 import '../../booking/application/appointment_provider.dart';
 import '../../branches/application/branch_provider.dart';
 import '../../users/application/user_provider.dart';
+import 'boss_ledger_api_screen.dart';
 import 'boss_widgets.dart';
 
 const bossStatuses = {
@@ -33,7 +33,7 @@ class _BossLedgerScreenState extends State<BossLedgerScreen>
   @override
   Widget build(BuildContext context) {
     if (context.watch<AuthController>().isRemote) {
-      return const ApiReportScreen(kind: ReportKind.bossLedger);
+      return const BossLedgerApiScreen();
     }
     super.build(context);
     final branches = context.watch<BranchProvider>();

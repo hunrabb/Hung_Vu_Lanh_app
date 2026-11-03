@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../auth/application/auth_controller.dart';
-import '../../reports/presentation/api_report_screen.dart';
 
 import '../../booking/application/appointment_provider.dart';
 import '../../branches/application/branch_provider.dart';
 import '../../users/application/user_provider.dart';
 import '../application/boss_reports.dart';
+import 'boss_overview_screen.dart';
 import 'boss_widgets.dart';
 
 class BossDashboardScreen extends StatefulWidget {
@@ -24,7 +24,7 @@ class _BossDashboardScreenState extends State<BossDashboardScreen>
   @override
   Widget build(BuildContext context) {
     if (context.watch<AuthController>().isRemote) {
-      return const ApiReportScreen(kind: ReportKind.bossDashboard);
+      return const BossOverviewScreen();
     }
     super.build(context);
     final booking = context.watch<AppointmentProvider>();
